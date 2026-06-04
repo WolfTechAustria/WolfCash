@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Enums\DeviceStatus;
 
 class Device extends Model
 {
@@ -22,6 +23,7 @@ class Device extends Model
     protected $casts = [
         'last_seen_at' => 'datetime',
         'approved_at' => 'datetime',
+        'status' => DeviceStatus::class,
     ];
 
     public function approver(): BelongsTo
