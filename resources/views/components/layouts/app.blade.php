@@ -12,6 +12,7 @@
     <a href="/admin">Dashboard</a>
     <a href="/admin/devices">Devices</a>
     <a href="/admin/tables">Tische</a>
+    <a href="/admin/products">Produkte</a>
 </nav>
 
 <main>

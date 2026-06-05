@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Livewire\Admin\Devices\Index as DevicesIndex;
 use App\Livewire\Pos\Index as PosIndex;
 use App\Livewire\Admin\Tables\Index as TablesIndex;
+use App\Livewire\Admin\Products\Index as ProductsIndex;
 
 /*
 |--------------------------------------------------------------------------
@@ -48,6 +49,10 @@ Route::middleware('auth')->group(function () {
         //Tables Management
         Route::get('/tables', TablesIndex::class)
             ->name('admin.tables');
+
+        //Product Management
+        Route::get('/products', ProductsIndex::class)
+            ->name('admin.products');
     });
 
     Route::get('/pos', PosIndex::class)
