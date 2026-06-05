@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Admin\Devices\Index as DevicesIndex;
+use App\Livewire\Pos\Index as PosIndex;
+use App\Livewire\Admin\Tables\Index as TablesIndex;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,6 +44,13 @@ Route::middleware('auth')->group(function () {
         // Device Management (Livewire)
         Route::get('/devices', DevicesIndex::class)
             ->name('admin.devices');
+
+        //Tables Management
+        Route::get('/tables', TablesIndex::class)
+            ->name('admin.tables');
     });
+
+    Route::get('/pos', PosIndex::class)
+        ->name('pos.index');
 
 });

@@ -1,19 +1,20 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Admin</title>
-</head>
-<body>
+<x-layouts.app>
 
-<h1>Admin Dashboard</h1>
 
-<ul>
+
+
     <ul>
-        <li><a href="/admin/devices">Geräte</a></li>
-    </ul>
-    <li>Produkte</li>
-    <li>Tische</li>
-</ul>
+        <li>
+            <a href="/admin/devices">
+                Geräte
+            </a>
+        </li>
 
-</body>
-</html>
+        <li>
+            <a href="/pos">
+                POS öffnen
+            </a>
+        </li>
+    </ul>
+
+</x-layouts.app>
