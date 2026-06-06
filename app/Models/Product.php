@@ -13,4 +13,9 @@ class Product extends Model
         'available_quantity',
         'is_active',
     ];
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
 }
