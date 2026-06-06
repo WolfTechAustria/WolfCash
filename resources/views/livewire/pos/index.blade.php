@@ -44,6 +44,28 @@
                     padding:20px;
                 "
             >
+
+                <h2>Bereits boniert</h2>
+
+                @forelse($orderItems as $item)
+
+                    <div>
+
+                        {{ $item['quantity'] }}x
+
+                        {{ $item['name'] }}
+
+                    </div>
+
+                @empty
+
+                    <p>Noch keine Bonierungen</p>
+
+                @endforelse
+
+                <hr>
+
+
                 <h2>Warenkorb</h2>
 
                 @forelse($cart as $item)
@@ -83,8 +105,20 @@
 
                 <strong>
                     Gesamt:
-                    {{ number_format($this->total, 2) }} €
+                    {{ number_format($this->total, 2) }}
                 </strong>
+
+                <br><br>
+
+                <button
+                    wire:click="bonieren"
+                    style="
+                        padding:15px;
+                        font-size:18px;
+                    "
+                >
+                    Bonieren
+                </button>
 
 
             </div>
@@ -96,6 +130,26 @@
                 "
             >
                 <h2>Produkte</h2>
+
+                <div style="margin-bottom:20px;">
+
+                    @foreach($categories as $category)
+
+                        <button
+                            wire:click="setCategory('{{ $category }}')"
+                        >
+
+                            {{ $category }}
+
+                        </button>
+
+                        <h3>
+                            {{ $activeCategory }}
+                        </h3>
+
+                    @endforeach
+
+                </div>
 
                 <div
                     style="

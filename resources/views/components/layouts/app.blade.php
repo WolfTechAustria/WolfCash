@@ -13,6 +13,11 @@
     <a href="/admin/devices">Devices</a>
     <a href="/admin/tables">Tische</a>
     <a href="/admin/products">Produkte</a>
+    <a href="/admin/product-groups">Produktgruppen</a>
+    <a href="/admin/product-categories">Produktkategorien</a>
+    <a href="/admin/printers">Drucker</a>
+    <a href="/admin/production-stations">Produktionsstation</a>
+
 </nav>
 
 <main>

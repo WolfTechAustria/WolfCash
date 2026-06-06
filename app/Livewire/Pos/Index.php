@@ -5,20 +5,65 @@ namespace App\Livewire\Pos;
 use Livewire\Component;
 use App\Models\Table;
 use App\Models\Product;
+use App\Services\OrderService;
 
 class Index extends Component
 {
     public ?int $selectedTable = null;
     public array $cart = [];
+    public array $orderItems = [];
+    public string $activeCategory = '1';
+
+
+    /*
+    public function selectTable(int $tableId): void
+    {
+        $this->selectedTable = $tableId;
+    }
+    */
 
     public function selectTable(int $tableId): void
     {
         $this->selectedTable = $tableId;
+
+        $this->cart = [];
+        $this->orderItems = [];
+
+        $order = \App\Models\Order::where(
+            'table_id',
+            $tableId
+        )
+            ->where(
+                'status',
+                \App\Models\Order::STATUS_OPEN
+            )
+            ->first();
+
+        if (!$order) {
+            return;
+        }
+
+        foreach ($order->items as $item) {
+
+            $this->orderItems[] = [
+
+                'name' => $item->product->name,
+
+                'quantity' => $item->quantity,
+
+                'price' => $item->price,
+            ];
+        }
     }
 
     public function backToTables(): void
     {
         $this->selectedTable = null;
+    }
+
+    public function setCategory(string $category): void
+    {
+        $this->activeCategory = $category;
     }
 
     public function addProduct(int $productId): void
@@ -51,6 +96,30 @@ class Index extends Component
         }
     }
 
+    public function bonieren(
+        OrderService $orderService
+    ): void {
+
+        if (!$this->selectedTable) {
+            return;
+        }
+
+        if (count($this->cart) === 0) {
+            return;
+        }
+
+        $orderService->createOrder(
+            $this->selectedTable,
+            $this->cart
+        );
+
+        $this->selectTable(
+            $this->selectedTable
+        );
+
+        $this->cart = [];
+    }
+
     public function getTotalProperty(): float
     {
         $total = 0;
@@ -77,9 +146,14 @@ class Index extends Component
                 : null,
 
             'products' => Product::where('is_active', true)
-                ->orderBy('category')
+                ->where('category', $this->activeCategory)
                 ->orderBy('name')
                 ->get(),
+
+            'categories' => Product::select('category')
+                ->distinct()
+                ->orderBy('category')
+                ->pluck('category'),
 
         ])->layout('components.layouts.app');
     }
