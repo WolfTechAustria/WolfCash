@@ -8,6 +8,7 @@ class ProductGroup extends Model
 {
     protected $fillable = [
         'name',
+        'sort_order',
     ];
 
     public function categories()

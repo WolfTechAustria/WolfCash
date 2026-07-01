@@ -8,7 +8,7 @@ use Livewire\Component;
 class Index extends Component
 {
     public string $name = '';
-
+    public ?int $editingId = null;
     protected function rules(): array
     {
         return [
@@ -20,17 +20,40 @@ class Index extends Component
     {
         $this->validate();
 
-        ProductionStation::create([
+        $data = [
             'name' => $this->name,
-        ]);
+        ];
 
-        $this->reset('name');
+        if ($this->editingId) {
+            ProductionStation::findOrFail($this->editingId)->update($data);
+        } else {
+            ProductionStation::create($data);
+        }
+
+        $this->reset([
+            'name',
+            'editingId',
+        ]);
+    }
+
+    public function edit(int $id): void
+    {
+        $station = ProductionStation::findOrFail($id);
+
+        $this->editingId = $station->id;
+        $this->name = $station->name;
     }
 
     public function delete(int $id): void
     {
-        ProductionStation::findOrFail($id)
-            ->delete();
+        $station = ProductionStation::withCount('categories')->findOrFail($id);
+
+        if ($station->categories_count > 0) {
+            $this->addError('delete', 'Diese Produktionsstation kann nicht gelöscht werden, solange Kategorien zugeordnet sind.');
+            return;
+        }
+
+        $station->delete();
     }
 
     public function render()

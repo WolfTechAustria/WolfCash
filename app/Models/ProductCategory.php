@@ -12,6 +12,7 @@ class ProductCategory extends Model
         'printer_id',
         'production_station_id',
         'name',
+        'sort_order',
     ];
 
     public function group()

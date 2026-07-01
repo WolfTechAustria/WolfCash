@@ -1,6 +1,12 @@
 <div>
 
-    <h1>Produktkategorien</h1>
+    <h1>
+        @if($editingId)
+            Produktkategorie bearbeiten
+        @else
+            Produktkategorien
+        @endif
+    </h1>
 
     <hr>
 
@@ -60,6 +66,8 @@
             placeholder="Kategorie"
         >
 
+        <input type="number" wire:model="sort_order" placeholder="Sortierung">
+
         <button type="submit">
             Speichern
         </button>
@@ -67,6 +75,12 @@
     </form>
 
     <hr>
+
+    @error('delete')
+    <div style="color:red;">
+        {{ $message }}
+    </div>
+    @enderror
 
     <table border="1" cellpadding="10">
 
@@ -78,6 +92,7 @@
             <th>Drucker</th>
             <th>Station</th>
             <th>Name</th>
+            <th>Sortierung</th>
             <th>Aktion</th>
 
         </tr>
@@ -106,7 +121,13 @@
                     {{ $category->name }}
                 </td>
 
+                <td>{{ $category->sort_order }}</td>
+
                 <td>
+                    <button wire:click="edit({{ $category->id }})">
+                        Bearbeiten
+                    </button>
+
 
                     <button
                         wire:click="delete({{ $category->id }})"

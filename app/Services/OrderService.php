@@ -10,25 +10,15 @@ use App\Models\Table;
 
 class OrderService
 {
-    public function createOrder(
-        int $tableId,
-        array $cart
-    ): Order {
-
+    public function createOrder(int $tableId,array $cart): Order
+    {
         $table = Table::findOrFail($tableId);
 
-        $order = Order::where(
-            'table_id',
-            $table->id
-        )
-            ->where(
-                'status',
-                Order::STATUS_OPEN
-            )
+        $order = Order::where('table_id',$table->id)
+            ->where('status',Order::STATUS_OPEN)
             ->first();
 
         if (!$order) {
-
             $order = Order::create([
                 'table_id' => $table->id,
                 'status' => Order::STATUS_OPEN,
@@ -38,18 +28,11 @@ class OrderService
 
         foreach ($cart as $item) {
 
-            $existingItem = OrderItem::where(
-                'order_id',
-                $order->id
-            )
-                ->where(
-                    'product_id',
-                    $item['id']
-                )
+            $existingItem = OrderItem::where('order_id',$order->id)
+                ->where('product_id',$item['id'])
                 ->first();
 
             if ($existingItem) {
-
                 $existingItem->increment(
                     'quantity',
                     $item['quantity']
@@ -69,9 +52,7 @@ class OrderService
 
         $order->total = $order->items()
             ->sum(
-                DB::raw(
-                    'quantity * price'
-                )
+                DB::raw('quantity * price')
             );
 
         $order->save();

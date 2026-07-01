@@ -16,6 +16,9 @@ class Index extends Component
     public ?int $printer_id = null;
     public ?int $production_station_id = null;
 
+    public int $sort_order = 0;
+    public ?int $editingId = null;
+
     protected function rules(): array
     {
         return [
@@ -29,6 +32,8 @@ class Index extends Component
 
             'production_station_id'
             => 'nullable|exists:production_stations,id',
+
+            'sort_order' => 'required|integer|min:0',
         ];
     }
 
@@ -36,30 +41,53 @@ class Index extends Component
     {
         $this->validate();
 
-        ProductCategory::create([
+        $data = [
             'name' => $this->name,
+            'product_group_id' => $this->product_group_id,
+            'printer_id' => $this->printer_id,
+            'production_station_id' => $this->production_station_id,
+            'sort_order' => $this->sort_order,
+        ];
 
-            'product_group_id'
-            => $this->product_group_id,
-
-            'printer_id'
-            => $this->printer_id,
-
-            'production_station_id'
-            => $this->production_station_id,
-        ]);
+        if ($this->editingId) {
+            ProductCategory::findOrFail($this->editingId)->update($data);
+        } else {
+            ProductCategory::create($data);
+        }
 
         $this->reset([
             'name',
             'product_group_id',
             'printer_id',
             'production_station_id',
+            'editingId',
         ]);
+
+        $this->sort_order = 0;
+    }
+
+    public function edit(int $id): void
+    {
+        $category = ProductCategory::findOrFail($id);
+
+        $this->editingId = $category->id;
+        $this->name = $category->name;
+        $this->product_group_id = $category->product_group_id;
+        $this->printer_id = $category->printer_id;
+        $this->production_station_id = $category->production_station_id;
+        $this->sort_order = $category->sort_order;
     }
 
     public function delete(int $id): void
     {
-        ProductCategory::findOrFail($id)->delete();
+        $category = ProductCategory::withCount('products')->findOrFail($id);
+
+        if ($category->products_count > 0) {
+            $this->addError('delete', 'Diese Kategorie kann nicht gelöscht werden, solange Produkte zugeordnet sind.');
+            return;
+        }
+
+        $category->delete();
     }
 
     public function render()
@@ -68,6 +96,7 @@ class Index extends Component
             'livewire.admin.product-categories.index',
             [
                 'categories' => ProductCategory::with('group')
+                    ->orderBy('sort_order')
                     ->orderBy('name')
                     ->get(),
 

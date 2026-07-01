@@ -1,6 +1,12 @@
 <div>
 
-    <h1>Produktgruppen</h1>
+    <h1>
+        @if($editingId)
+            Produktgruppe bearbeiten
+        @else
+            Produktgruppen
+        @endif
+    </h1>
 
     <hr>
 
@@ -12,6 +18,12 @@
             placeholder="Name"
         >
 
+        <input
+            type="number"
+            wire:model="sort_order"
+            placeholder="Sortierung"
+        >
+
         <button type="submit">
             Speichern
         </button>
@@ -20,11 +32,18 @@
 
     <hr>
 
+    @error('delete')
+    <div style="color:red;">
+        {{ $message }}
+    </div>
+    @enderror
+
     <table border="1" cellpadding="10">
 
         <thead>
         <tr>
             <th>Name</th>
+            <th>Sortierung</th>
             <th>Aktion</th>
         </tr>
         </thead>
@@ -39,13 +58,18 @@
                     {{ $group->name }}
                 </td>
 
-                <td>
+                <td>{{ $group->sort_order }}</td>
 
+                <td>
+                    <button wire:click="edit({{ $group->id }})">
+                        Bearbeiten
+                    </button>
                     <button
                         wire:click="delete({{ $group->id }})"
                     >
                         Löschen
                     </button>
+
 
                 </td>
 

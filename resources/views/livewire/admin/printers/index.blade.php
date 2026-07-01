@@ -1,6 +1,12 @@
 <div>
 
-    <h1>Drucker</h1>
+    <h1>
+        @if($editingId)
+            Drucker bearbeiten
+        @else
+            Drucker
+        @endif
+    </h1>
 
     <hr>
 
@@ -25,6 +31,12 @@
     </form>
 
     <hr>
+
+    @error('delete')
+    <div style="color:red;">
+        {{ $message }}
+    </div>
+    @enderror
 
     <table border="1" cellpadding="10">
 
@@ -75,6 +87,10 @@
                         wire:click="toggle({{ $printer->id }})"
                     >
                         Status
+                    </button>
+
+                    <button wire:click="edit({{ $printer->id }})">
+                        Bearbeiten
                     </button>
 
                     <button

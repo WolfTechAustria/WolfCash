@@ -72,24 +72,57 @@
 
                     <div
                         style="
-            display:flex;
-            justify-content:space-between;
+            border-bottom:1px solid #ccc;
+            padding-bottom:10px;
             margin-bottom:10px;
         "
                     >
 
-                        <div>
-                            {{ $item['quantity'] }}x
-                            {{ $item['name'] }}
-                        </div>
+                        <div
+                            style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+            "
+                        >
 
-                        <div>
+                            <div>
 
-                            <button
-                                wire:click="removeProduct({{ $item['id'] }})"
+                                <strong>
+                                    {{ $item['name'] }}
+                                </strong>
+
+                                <br>
+
+                                {{ number_format($item['price'], 2) }} €
+
+                            </div>
+
+                            <div
+                                style="
+                    display:flex;
+                    align-items:center;
+                    gap:10px;
+                "
                             >
-                                -
-                            </button>
+
+                                <button
+                                    wire:click="removeProduct({{ $item['id'] }})"
+                                    style="
+                        width:40px;
+                        height:40px;
+                    "
+                                >
+                                    -
+                                </button>
+
+                                <strong>
+                                    {{ $item['quantity'] }}
+                                </strong>
+
+                                <button wire:click="increaseProduct({{ $item['id'] }})" style="width:40px;height:40px;">+</button>
+
+                            </div>
 
                         </div>
 
@@ -133,19 +166,41 @@
 
                 <div style="margin-bottom:20px;">
 
-                    @foreach($categories as $category)
+                    @foreach($groups as $group)
 
                         <button
-                            wire:click="setCategory('{{ $category }}')"
+                            wire:click="setGroup({{ $group->id }})"
+
+                            style="
+        padding:12px;
+        margin-right:5px;
+    "
                         >
 
-                            {{ $category }}
+                            {{ $group->name }}
 
                         </button>
 
-                        <h3>
-                            {{ $activeCategory }}
-                        </h3>
+                    @endforeach
+
+                </div>
+
+                <div style="margin-bottom:20px;">
+
+                    @foreach($categories as $category)
+
+                        <button
+                            wire:click="setCategory({{ $category->id }})"
+
+                            style="
+        padding:10px;
+        margin-right:5px;
+    "
+                        >
+
+                            {{ $category->name }}
+
+                        </button>
 
                     @endforeach
 
@@ -153,30 +208,66 @@
 
                 <div
                     style="
-                    display:flex;
-                    gap:15px;
-                    flex-wrap:wrap;
-                    "
+        display:grid;
+        grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+        gap:15px;
+    "
                 >
 
                     @foreach($products as $product)
-                    <button
-                        wire:click="addProduct({{ $product->id }})"
+                        @if($product->isSoldOut())
 
-                        style="
-                            width:150px;
-                            height:100px;
+                            <button
+                                disabled
+
+                                style="
+            height:120px;
+            opacity:0.5;
+        "
+                            >
+
+                                {{ $product->name }}
+
+                                <br>
+
+                                AUSVERKAUFT
+
+                            </button>
+
+                        @else
+
+                        <button
+                            wire:click="addProduct({{ $product->id }})"
+
+                            style="
+                                height:120px;
+                                border:1px solid #ccc;
+                                border-radius:10px;
+                                padding:10px;
+
+                                display:flex;
+                                flex-direction:column;
+                                justify-content:space-between;
+
+                                text-align:left;
                             "
-                    >
-                        <strong>
-                            {{ $product->name }}
-                        </strong>
+                        >
+                            <div>
 
-                        <br>
+                                <strong>
+                                    {{ $product->name }}
+                                </strong>
 
-                        {{ number_format($product->price, 2) }} €
+                            </div>
+
+                            <div>
+
+                                {{ number_format($product->price, 2) }} €
+
+                            </div>
 
                     </button>
+                        @endif
 
                     @endforeach
 

@@ -1,7 +1,12 @@
 <div>
 
-    <h1>Produktionsstationen</h1>
-
+    <h1>
+        @if($editingId)
+            Produktionsstation bearbeiten
+        @else
+            Produktionsstationen
+        @endif
+    </h1>
     <hr>
 
     <form wire:submit="save">
@@ -19,6 +24,12 @@
     </form>
 
     <hr>
+
+    @error('delete')
+    <div style="color:red;">
+        {{ $message }}
+    </div>
+    @enderror
 
     <table border="1" cellpadding="10">
 
@@ -45,6 +56,10 @@
                 </td>
 
                 <td>
+
+                    <button wire:click="edit({{ $station->id }})">
+                        Bearbeiten
+                    </button>
 
                     <button
                         wire:click="delete({{ $station->id }})"

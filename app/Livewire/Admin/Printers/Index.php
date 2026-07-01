@@ -8,10 +8,9 @@ use Livewire\Component;
 class Index extends Component
 {
     public string $name = '';
-
     public string $ip_address = '';
-
     public bool $is_active = true;
+    public ?int $editingId = null;
 
     protected function rules(): array
     {
@@ -25,18 +24,35 @@ class Index extends Component
     {
         $this->validate();
 
-        Printer::create([
+        $data = [
             'name' => $this->name,
             'ip_address' => $this->ip_address,
             'is_active' => $this->is_active,
-        ]);
+        ];
+
+        if ($this->editingId) {
+            Printer::findOrFail($this->editingId)->update($data);
+        } else {
+            Printer::create($data);
+        }
 
         $this->reset([
             'name',
             'ip_address',
+            'editingId',
         ]);
 
         $this->is_active = true;
+    }
+
+    public function edit(int $id): void
+    {
+        $printer = Printer::findOrFail($id);
+
+        $this->editingId = $printer->id;
+        $this->name = $printer->name;
+        $this->ip_address = $printer->ip_address ?? '';
+        $this->is_active = $printer->is_active;
     }
 
     public function toggle(int $id): void
@@ -50,7 +66,14 @@ class Index extends Component
 
     public function delete(int $id): void
     {
-        Printer::findOrFail($id)->delete();
+        $printer = Printer::withCount('categories')->findOrFail($id);
+
+        if ($printer->categories_count > 0) {
+            $this->addError('delete', 'Dieser Drucker kann nicht gelöscht werden, solange Kategorien zugeordnet sind.');
+            return;
+        }
+
+        $printer->delete();
     }
 
     public function render()

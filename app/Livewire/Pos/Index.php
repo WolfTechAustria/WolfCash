@@ -6,13 +6,18 @@ use Livewire\Component;
 use App\Models\Table;
 use App\Models\Product;
 use App\Services\OrderService;
+use App\Models\ProductGroup;
+use App\Models\ProductCategory;
 
 class Index extends Component
 {
     public ?int $selectedTable = null;
     public array $cart = [];
     public array $orderItems = [];
-    public string $activeCategory = '1';
+
+    public ?int $activeGroup = null;
+
+    public ?int $activeCategory = null;
 
 
     /*
@@ -29,14 +34,8 @@ class Index extends Component
         $this->cart = [];
         $this->orderItems = [];
 
-        $order = \App\Models\Order::where(
-            'table_id',
-            $tableId
-        )
-            ->where(
-                'status',
-                \App\Models\Order::STATUS_OPEN
-            )
+        $order = \App\Models\Order::where('table_id',$tableId)
+            ->where('status',\App\Models\Order::STATUS_OPEN)
             ->first();
 
         if (!$order) {
@@ -46,11 +45,8 @@ class Index extends Component
         foreach ($order->items as $item) {
 
             $this->orderItems[] = [
-
                 'name' => $item->product->name,
-
                 'quantity' => $item->quantity,
-
                 'price' => $item->price,
             ];
         }
@@ -61,9 +57,19 @@ class Index extends Component
         $this->selectedTable = null;
     }
 
-    public function setCategory(string $category): void
+    public function setGroup(int $groupId): void
     {
-        $this->activeCategory = $category;
+        $this->activeGroup = $groupId;
+
+        $this->activeCategory = ProductCategory::where(
+            'product_group_id',
+            $groupId
+        )->value('id');
+    }
+
+    public function setCategory(string $categoryId): void
+    {
+        $this->activeCategory = $categoryId;
     }
 
     public function addProduct(int $productId): void
@@ -96,9 +102,17 @@ class Index extends Component
         }
     }
 
-    public function bonieren(
-        OrderService $orderService
-    ): void {
+    public function increaseProduct(int $productId): void
+    {
+        if (!isset($this->cart[$productId])) {
+            return;
+        }
+
+        $this->cart[$productId]['quantity']++;
+    }
+
+    public function bonieren(OrderService $orderService): void
+    {
 
         if (!$this->selectedTable) {
             return;
@@ -113,10 +127,7 @@ class Index extends Component
             $this->cart
         );
 
-        $this->selectTable(
-            $this->selectedTable
-        );
-
+        $this->selectTable($this->selectedTable);
         $this->cart = [];
     }
 
@@ -137,6 +148,21 @@ class Index extends Component
 
     public function render()
     {
+        if (!$this->activeGroup) {
+
+            $firstGroup = ProductGroup::first();
+
+            if ($firstGroup) {
+
+                $this->activeGroup = $firstGroup->id;
+
+                $this->activeCategory = ProductCategory::where(
+                    'product_group_id',
+                    $firstGroup->id
+                )->value('id');
+            }
+        }
+
         return view('livewire.pos.index', [
 
             'tables' => Table::orderBy('number')->get(),
@@ -145,15 +171,28 @@ class Index extends Component
                 ? Table::find($this->selectedTable)
                 : null,
 
-            'products' => Product::where('is_active', true)
-                ->where('category', $this->activeCategory)
+            'groups' => ProductGroup::orderBy('sort_order')
                 ->orderBy('name')
                 ->get(),
 
-            'categories' => Product::select('category')
-                ->distinct()
-                ->orderBy('category')
-                ->pluck('category'),
+            'categories' => $this->activeGroup
+                ? ProductCategory::where(
+                    'product_group_id',
+                    $this->activeGroup
+                )->orderBy('sort_order')
+                    ->orderBy('name')->get()
+                : collect(),
+
+            'products' => $this->activeCategory
+                ? Product::where(
+                    'product_category_id',
+                    $this->activeCategory
+                )
+                    ->where('is_active', true)
+                    ->orderBy('sort_order')
+                    ->orderBy('name')
+                    ->get()
+                : collect(),
 
         ])->layout('components.layouts.app');
     }
