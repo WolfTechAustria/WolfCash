@@ -16,4 +16,10 @@ class Table extends Model
     {
         return $this->hasMany(Order::class);
     }
+
+    public function openOrder()
+    {
+        return $this->hasOne(Order::class)
+            ->where('status', Order::STATUS_OPEN);
+    }
 }

@@ -46,6 +46,7 @@ class OrderService
                     'quantity' => $item['quantity'],
                     'price' => $item['price'],
                     'status' => OrderItem::STATUS_PENDING,
+                    'note' => $item['note'] ?? null,
                 ]);
             }
         }

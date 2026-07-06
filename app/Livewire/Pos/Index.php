@@ -19,6 +19,9 @@ class Index extends Component
 
     public ?int $activeCategory = null;
 
+    public string $tableSelectionMode = 'keypad';
+    public string $tableNumberInput = '';
+
 
     /*
     public function selectTable(int $tableId): void
@@ -48,6 +51,7 @@ class Index extends Component
                 'name' => $item->product->name,
                 'quantity' => $item->quantity,
                 'price' => $item->price,
+                'note' => $item->note,
             ];
         }
     }
@@ -55,6 +59,55 @@ class Index extends Component
     public function backToTables(): void
     {
         $this->selectedTable = null;
+    }
+
+    public function setTableSelectionMode(string $mode): void
+    {
+        $this->tableSelectionMode = $mode;
+    }
+
+    public function pressTableNumber(string $number): void
+    {
+        $this->tableNumberInput .= $number;
+    }
+
+    public function clearTableNumber(): void
+    {
+        $this->tableNumberInput = '';
+    }
+
+    public function deleteLastTableNumber(): void
+    {
+        $this->tableNumberInput = substr(
+            $this->tableNumberInput,
+            0,
+            -1
+        );
+    }
+
+    public function confirmTableNumber(): void
+    {
+        if ($this->tableNumberInput === '') {
+            return;
+        }
+
+        $table = Table::where(
+            'number',
+            $this->tableNumberInput
+        )->first();
+
+        if (! $table) {
+            $this->addError(
+                'tableNumberInput',
+                'Tisch nicht gefunden.'
+            );
+
+            return;
+        }
+
+        $this->selectTable($table->id);
+
+        $this->tableNumberInput = '';
     }
 
     public function setGroup(int $groupId): void
@@ -83,6 +136,7 @@ class Index extends Component
                 'name' => $product->name,
                 'price' => $product->price,
                 'quantity' => 0,
+                'note' => '',
             ];
         }
 
@@ -165,7 +219,9 @@ class Index extends Component
 
         return view('livewire.pos.index', [
 
-            'tables' => Table::orderBy('number')->get(),
+            'tables' => Table::with('openOrder')
+                ->orderBy('number')
+                ->get(),
 
             'table' => $this->selectedTable
                 ? Table::find($this->selectedTable)

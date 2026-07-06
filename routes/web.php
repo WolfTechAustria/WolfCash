@@ -9,6 +9,7 @@ use App\Livewire\Admin\ProductGroups\Index as ProductGroupsIndex;
 use App\Livewire\Admin\ProductCategories\Index as ProductCategoriesIndex;
 use App\Livewire\Admin\Printers\Index as PrintersIndex;
 use App\Livewire\Admin\ProductionStations\Index as ProductionStationsIndex;
+use App\Livewire\Pos\Checkout;
 
 /*
 |--------------------------------------------------------------------------
@@ -75,5 +76,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/pos', PosIndex::class)
         ->name('pos.index');
+
+    Route::get('/pos/checkout/{table}', Checkout::class)
+        ->name('pos.checkout');
 
 });

@@ -12,6 +12,8 @@ class OrderItem extends Model
         'quantity',
         'price',
         'status',
+        'note',
+        'paid_at',
     ];
 
     public const STATUS_PENDING = 'pending';
@@ -27,4 +29,8 @@ class OrderItem extends Model
     {
         return $this->belongsTo(Order::class);
     }
+
+    protected $casts = [
+        'paid_at' => 'datetime',
+    ];
 }
