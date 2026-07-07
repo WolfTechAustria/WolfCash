@@ -10,7 +10,7 @@ use App\Models\Table;
 
 class OrderService
 {
-    public function createOrder(int $tableId,array $cart): Order
+    public function createOrder(int $tableId,array $cart, ?PrintService $printService = null): Order
     {
         $table = Table::findOrFail($tableId);
 
@@ -61,6 +61,10 @@ class OrderService
         $table->update([
             'status' => 'occupied',
         ]);
+
+        if ($printService) {
+            $printService->createProductionJobs($order, $cart);
+        }
 
         return $order;
     }

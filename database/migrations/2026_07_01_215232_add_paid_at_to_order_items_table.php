@@ -24,4 +24,7 @@ return new class extends Migration
             $table->dropColumn('paid_at');
         });
     }
+
+
+
 };

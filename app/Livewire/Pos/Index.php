@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Services\OrderService;
 use App\Models\ProductGroup;
 use App\Models\ProductCategory;
+use App\Services\PrintService;
 
 class Index extends Component
 {
@@ -165,7 +166,7 @@ class Index extends Component
         $this->cart[$productId]['quantity']++;
     }
 
-    public function bonieren(OrderService $orderService): void
+    public function bonieren(OrderService $orderService, PrintService $printService): void
     {
 
         if (!$this->selectedTable) {
@@ -178,7 +179,8 @@ class Index extends Component
 
         $orderService->createOrder(
             $this->selectedTable,
-            $this->cart
+            $this->cart,
+            $printService
         );
 
         $this->selectTable($this->selectedTable);

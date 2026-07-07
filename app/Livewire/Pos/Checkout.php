@@ -6,6 +6,8 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Table;
 use Livewire\Component;
+use App\Services\PaymentService;
+use App\Models\Payment;
 
 class Checkout extends Component
 {
@@ -14,6 +16,9 @@ class Checkout extends Component
     public ?Order $order = null;
 
     public array $selectedForPayment = [];
+    public bool $paymentFinished = false;
+
+    public ?Payment $lastPayment = null;
 
     public function mount(Table $table): void
     {
@@ -26,6 +31,7 @@ class Checkout extends Component
     {
         $this->order = Order::with([
             'items.product',
+            'payments',
         ])
             ->where('table_id', $this->table->id)
             ->where('status', Order::STATUS_OPEN)
@@ -63,64 +69,48 @@ class Checkout extends Component
             ->whereNull('paid_at');
     }
 
-    public function paySelected(string $method): void
+    public function paySelected(string $method,PaymentService $paymentService): void
     {
         if (! $this->order) {
             return;
         }
 
         if (count($this->selectedForPayment) === 0) {
-            $this->addError('payment', 'Bitte mindestens eine Position auswählen.');
+            $this->addError(
+                'payment',
+                'Bitte mindestens eine Position auswählen.'
+            );
+
             return;
         }
 
-        foreach ($this->selectedForPayment as $itemId => $quantity) {
-            $item = OrderItem::where('order_id', $this->order->id)
-                ->whereNull('paid_at')
-                ->find($itemId);
-
-            if (! $item) {
-                continue;
-            }
-
-            $payQuantity = min((int) $quantity, $item->quantity);
-
-            if ($payQuantity === $item->quantity) {
-                $item->update([
-                    'paid_at' => now(),
-                ]);
-            } else {
-                OrderItem::create([
-                    'order_id' => $item->order_id,
-                    'product_id' => $item->product_id,
-                    'quantity' => $payQuantity,
-                    'price' => $item->price,
-                    'note' => $item->note,
-                    'status' => $item->status,
-                    'paid_at' => now(),
-                ]);
-
-                $item->update([
-                    'quantity' => $item->quantity - $payQuantity,
-                ]);
-            }
-        }
+        $paymentService->paySelection(
+            $this->order,
+            $this->selectedForPayment,
+            $method
+        );
 
         $this->selectedForPayment = [];
 
         $this->loadOrder();
 
-        if ($this->openItems->count() === 0) {
-            $this->order->update([
-                'status' => Order::STATUS_PAID,
-            ]);
+        $this->closeOrderIfFullyPaid();
+    }
 
-            $this->table->update([
-                'status' => 'free',
-            ]);
-
-            redirect()->route('pos.index');
+    public function payOpen(string $method,PaymentService $paymentService): void
+    {
+        if (! $this->order) {
+            return;
         }
+
+        $paymentService->payRemaining(
+            $this->order,
+            $method
+        );
+
+        $this->loadOrder();
+
+        $this->closeOrderIfFullyPaid();
     }
 
     public function addToPayment(int $itemId): void
@@ -153,17 +143,47 @@ class Checkout extends Component
         }
     }
 
-    public function payAll(string $method): void
+    public function getTotalAmountProperty(): float
+    {
+        if (! $this->order) {
+            return 0;
+        }
+
+        return $this->order->items
+            ->sum(fn ($item) => $item->price * $item->quantity);
+    }
+
+    public function getPaidAmountProperty(): float
+    {
+        if (! $this->order) {
+            return 0;
+        }
+
+        return $this->order->items
+            ->whereNotNull('paid_at')
+            ->sum(fn ($item) => $item->price * $item->quantity);
+    }
+
+    public function getOpenAmountProperty(): float
+    {
+        if (! $this->order) {
+            return 0;
+        }
+
+        return $this->order->items
+            ->whereNull('paid_at')
+            ->sum(fn ($item) => $item->price * $item->quantity);
+    }
+
+    private function closeOrderIfFullyPaid(): void
     {
         if (! $this->order) {
             return;
         }
 
-        OrderItem::where('order_id', $this->order->id)
-            ->whereNull('paid_at')
-            ->update([
-                'paid_at' => now(),
-            ]);
+        if ($this->openItems->count() > 0) {
+            return;
+        }
 
         $this->order->update([
             'status' => Order::STATUS_PAID,
@@ -173,8 +193,20 @@ class Checkout extends Component
             'status' => 'free',
         ]);
 
-        redirect()->route('pos.index');
+        $this->lastPayment = $this->order
+            ->payments()
+            ->latest()
+            ->first();
+
+        $this->paymentFinished = true;
     }
+
+    public function backToPos()
+    {
+        return redirect()->route('pos.index');
+    }
+
+
 
     public function render()
     {

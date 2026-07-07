@@ -1,5 +1,44 @@
 <div>
 
+    @if($paymentFinished)
+
+        <div style="text-align:center;padding:40px;">
+
+            <h1>✅ Zahlung erfolgreich</h1>
+
+            <h2>
+                Tisch {{ $table->number }}
+            </h2>
+
+            @if($lastPayment)
+
+                <p>
+                    Zahlungsart:
+                    {{ $lastPayment->payment_method }}
+                </p>
+
+                <h2>
+                    {{ number_format($lastPayment->amount, 2) }} €
+                </h2>
+
+            @endif
+
+            <br>
+
+            <button disabled>
+                Beleg drucken
+            </button>
+
+            <br><br>
+
+            <button wire:click="backToPos">
+                Zurück zur POS
+            </button>
+
+        </div>
+
+    @else
+
     <h1>Abrechnung Tisch {{ $table->number }}</h1>
 
     @if(! $order)
@@ -113,23 +152,75 @@
 
         <hr>
 
-        <h2>
-            Gesamtsumme:
-            {{ number_format($order->total, 2) }} €
-        </h2>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;">
 
-        <h3>
-            Ausgewählt:
-            {{ number_format($this->selectedTotal, 2) }} €
-        </h3>
+            <div style="border:1px solid #ccc;padding:15px;">
+                <strong>Gesamtbetrag</strong>
+                <br>
+                {{ number_format($this->totalAmount, 2) }} €
+            </div>
 
-        <h3>
-            Noch offen:
-            {{ number_format(
-                $this->openItems->sum(fn ($item) => $item->price * $item->quantity),
-                2
-            ) }} €
-        </h3>
+            <div style="border:1px solid #ccc;padding:15px;">
+                <strong>Bereits bezahlt</strong>
+                <br>
+                {{ number_format($this->paidAmount, 2) }} €
+            </div>
+
+            <div style="border:1px solid #ccc;padding:15px;">
+                <strong>Noch offen</strong>
+                <br>
+                {{ number_format($this->openAmount, 2) }} €
+            </div>
+
+            <div style="border:1px solid #ccc;padding:15px;">
+                <strong>Aktuelle Auswahl</strong>
+                <br>
+                {{ number_format($this->selectedTotal, 2) }} €
+            </div>
+
+        </div>
+
+        <hr>
+
+        <h2>Zahlungen</h2>
+
+        @if($order->payments->isEmpty())
+
+            <p>Noch keine Zahlungen.</p>
+
+        @else
+
+            <table border="1" cellpadding="10" width="100%">
+                <thead>
+                <tr>
+                    <th>Zeit</th>
+                    <th>Zahlungsart</th>
+                    <th>Betrag</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                @foreach($order->payments as $payment)
+
+                    <tr>
+                        <td>
+                            {{ $payment->created_at->format('H:i') }}
+                        </td>
+
+                        <td>
+                            {{ $payment->payment_method }}
+                        </td>
+
+                        <td>
+                            {{ number_format($payment->amount, 2) }} €
+                        </td>
+                    </tr>
+
+                @endforeach
+                </tbody>
+            </table>
+
+        @endif
 
         <button wire:click="paySelected('cash')">
             Auswahl bar bezahlen
@@ -141,12 +232,12 @@
 
         <hr>
 
-        <button wire:click="payAll('cash')">
-            Alles bar bezahlen
+        <button wire:click="payOpen('cash')">
+            Rest bar bezahlen
         </button>
 
-        <button wire:click="payAll('card')">
-            Alles mit Karte bezahlen
+        <button wire:click="payOpen('card')">
+            Rest mit Karte bezahlen
         </button>
 
         <br><br>
@@ -157,4 +248,6 @@
 
     @endif
 
+    @endif
 </div>
+

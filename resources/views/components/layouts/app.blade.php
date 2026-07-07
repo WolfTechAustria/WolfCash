@@ -17,6 +17,7 @@
     <a href="/admin/product-categories">Produktkategorien</a>
     <a href="/admin/printers">Drucker</a>
     <a href="/admin/production-stations">Produktionsstation</a>
+    <a href="/admin/print-jobs">Druckjobs</a>
 
 </nav>
 
