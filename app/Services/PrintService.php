@@ -8,59 +8,73 @@ use App\Models\Product;
 
 class PrintService
 {
-    public function createProductionJobs(Order $order, array $cart): void
+    public function createProductionJobs(Order $order, array $orderItems): void
     {
-        $jobsByPrinter = [];
+        $jobsByStation = [];
 
-        foreach ($cart as $item) {
-            $product = Product::with('category.printer')
-                ->findOrFail($item['id']);
+        foreach ($orderItems as $orderItem) {
+            $product = $orderItem->product()
+                ->with([
+                    'category.printer',
+                    'category.productionStation',
+                ])
+                ->first();
+
+            if (! $product) {
+                continue;
+            }
 
             if ($product->print_mode === Product::PRINT_NONE) {
                 continue;
             }
 
-            $printer = $product->category?->printer;
+            $category = $product->category;
 
-            if (! $printer) {
+            if (! $category) {
                 continue;
             }
 
-            $printerId = $printer->id;
+            $station = $category->productionStation;
+            $printer = $category->printer;
 
-            $jobsByPrinter[$printerId]['printer_id'] = $printerId;
+            if (! $station) {
+                continue;
+            }
 
-            if ($product->print_mode === Product::PRINT_SPLIT) {
-                for ($i = 1; $i <= $item['quantity']; $i++) {
-                    $jobsByPrinter[$printerId]['items'][] = [
-                        'name' => $product->name,
-                        'quantity' => 1,
-                        'price' => $item['price'],
-                        'note' => $item['note'] ?? null,
-                        'print_mode' => $product->print_mode,
-                    ];
-                }
-            } else {
-                $jobsByPrinter[$printerId]['items'][] = [
-                    'name' => $product->name,
-                    'quantity' => $item['quantity'],
-                    'price' => $item['price'],
-                    'note' => $item['note'] ?? null,
-                    'print_mode' => $product->print_mode,
+            $stationId = $station->id;
+
+            if (! isset($jobsByStation[$stationId])) {
+                $jobsByStation[$stationId] = [
+                    'printer_id' => $printer?->id,
+                    'production_station_id' => $stationId,
+                    'items' => [],
                 ];
             }
+
+            $jobsByStation[$stationId]['items'][] = [
+                'order_item_id' => $orderItem->id,
+                'name' => $product->name,
+                'quantity' => $orderItem->quantity,
+                'note' => $orderItem->note,
+                'print_mode' => $product->print_mode,
+            ];
         }
 
-        foreach ($jobsByPrinter as $job) {
+        foreach ($jobsByStation as $jobData) {
+            if (empty($jobData['items'])) {
+                continue;
+            }
+
             PrintJob::create([
                 'order_id' => $order->id,
-                'printer_id' => $job['printer_id'],
+                'printer_id' => $jobData['printer_id'],
+                'production_station_id' => $jobData['production_station_id'],
                 'type' => PrintJob::TYPE_PRODUCTION,
                 'status' => PrintJob::STATUS_PENDING,
                 'payload' => [
                     'order_id' => $order->id,
                     'table' => $order->table?->number,
-                    'items' => $job['items'],
+                    'items' => $jobData['items'],
                 ],
             ]);
         }

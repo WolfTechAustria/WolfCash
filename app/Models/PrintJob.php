@@ -22,6 +22,7 @@ class PrintJob extends Model
         'payload',
         'printed_at',
         'error_message',
+        'production_station_id',
     ];
 
     protected $casts = [
@@ -37,5 +38,12 @@ class PrintJob extends Model
     public function printer()
     {
         return $this->belongsTo(Printer::class);
+    }
+
+    public function productionStation()
+    {
+        return $this->belongsTo(
+            ProductionStation::class
+        );
     }
 }

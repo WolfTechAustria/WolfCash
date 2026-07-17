@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ProductionStation;
 
 class Printer extends Model
 {
+
     protected $fillable = [
         'name',
         'ip_address',
@@ -16,4 +18,5 @@ class Printer extends Model
     {
         return $this->hasMany(ProductCategory::class);
     }
+
 }
