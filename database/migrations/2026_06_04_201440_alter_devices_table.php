@@ -12,6 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('devices', function (Blueprint $table) {
+            if (Schema::hasColumn('devices', 'uuid')) {
+                $table->dropColumn('uuid');
+            }
+        });
+
+        Schema::table('devices', function (Blueprint $table) {
 
             $table->uuid('uuid')->unique();
 
