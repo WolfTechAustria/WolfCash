@@ -23,12 +23,18 @@ class PrintJob extends Model
         'printed_at',
         'error_message',
         'production_station_id',
+        'error_message',
+        'production_completed_at',
     ];
 
-    protected $casts = [
-        'payload' => 'array',
-        'printed_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'payload' => 'array',
+            'printed_at' => 'datetime',
+            'production_completed_at' => 'datetime',
+        ];
+    }
 
     public function order()
     {

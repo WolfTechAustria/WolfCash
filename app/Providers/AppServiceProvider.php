@@ -2,21 +2,36 @@
 
 namespace App\Providers;
 
+use App\Printing\EscPosNetworkTransport;
+use App\Printing\PrintTransport;
+use App\Printing\SimulationPrintTransport;
 use Illuminate\Support\ServiceProvider;
+use RuntimeException;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        //
+        $this->app->bind(
+            PrintTransport::class,
+            function () {
+                return match (config('printing.driver')) {
+                    'simulation' =>
+                    new SimulationPrintTransport(),
+
+                    'escpos' =>
+                    new EscPosNetworkTransport(),
+
+                    default =>
+                    throw new RuntimeException(
+                        'Unbekannter PRINT_DRIVER: '
+                        .config('printing.driver')
+                    ),
+                };
+            }
+        );
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         //

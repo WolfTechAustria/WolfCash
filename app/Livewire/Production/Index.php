@@ -23,7 +23,7 @@ class Index extends Component
     public function completeItemUnit( int $jobId, int $itemId): void
     {
         $job = PrintJob::query()
-            ->where('status', PrintJob::STATUS_PENDING)
+            ->whereNull('production_completed_at')
             ->findOrFail($jobId);
 
         $payloadItemIds = collect($job->payload['items'] ?? [])
@@ -71,7 +71,7 @@ class Index extends Component
     public function reopenItemUnit( int $jobId, int $itemId): void
     {
         $job = PrintJob::query()
-            ->where('status', PrintJob::STATUS_PENDING)
+            ->whereNull('production_completed_at')
             ->findOrFail($jobId);
 
         $payloadItemIds = collect($job->payload['items'] ?? [])
@@ -116,7 +116,7 @@ class Index extends Component
         int $itemId
     ): void {
         $job = PrintJob::query()
-            ->where('status', PrintJob::STATUS_PENDING)
+            ->whereNull('production_completed_at')
             ->findOrFail($jobId);
 
         $payloadItemIds = collect($job->payload['items'] ?? [])
@@ -147,7 +147,7 @@ class Index extends Component
         int $itemId
     ): void {
         $job = PrintJob::query()
-            ->where('status', PrintJob::STATUS_PENDING)
+            ->whereNull('production_completed_at')
             ->findOrFail($jobId);
 
         $payloadItemIds = collect($job->payload['items'] ?? [])
@@ -171,7 +171,7 @@ class Index extends Component
     public function completeJob(int $jobId): void
     {
         $job = PrintJob::query()
-            ->where('status', PrintJob::STATUS_PENDING)
+            ->whereNull('production_completed_at')
             ->findOrFail($jobId);
 
         $itemIds = collect($job->payload['items'] ?? [])
@@ -193,8 +193,7 @@ class Index extends Component
         }
 
         $job->update([
-            'status' => PrintJob::STATUS_PRINTED,
-            'printed_at' => now(),
+            'production_completed_at' => now(),
         ]);
     }
 
@@ -217,8 +216,7 @@ class Index extends Component
 
         if (! $openItemsExist) {
             $job->update([
-                'status' => PrintJob::STATUS_PRINTED,
-                'printed_at' => now(),
+                'production_completed_at' => now(),
             ]);
         }
     }
@@ -230,7 +228,7 @@ class Index extends Component
                 'order.table',
                 'productionStation',
             ])
-            ->where('status', PrintJob::STATUS_PENDING)
+            ->whereNull('production_completed_at')
             ->when(
                 $this->station !== null,
                 fn ($query) => $query->where(

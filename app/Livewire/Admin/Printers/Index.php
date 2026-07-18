@@ -4,6 +4,7 @@ namespace App\Livewire\Admin\Printers;
 
 use App\Models\Printer;
 use Livewire\Component;
+use App\Services\PrinterTestService;
 
 class Index extends Component
 {
@@ -74,6 +75,30 @@ class Index extends Component
         }
 
         $printer->delete();
+    }
+
+    public function testPrinter(int $printerId): void
+    {
+        $printer = Printer::findOrFail($printerId);
+
+        try {
+            app(PrinterTestService::class)
+                ->printTest($printer);
+
+            session()->flash(
+                'success',
+                'Testdruck erfolgreich gesendet.'
+            );
+
+        } catch (\Throwable $e) {
+
+            report($e);
+
+            session()->flash(
+                'error',
+                $e->getMessage()
+            );
+        }
     }
 
     public function render()

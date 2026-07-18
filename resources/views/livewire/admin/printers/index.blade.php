@@ -1,5 +1,6 @@
 <div>
 
+
     <h1>
         @if($editingId)
             Drucker bearbeiten
@@ -7,6 +8,18 @@
             Drucker
         @endif
     </h1>
+
+        @if(session('success'))
+            <div class="mb-4 rounded bg-green-100 border border-green-300 p-3 text-green-800">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="mb-4 rounded bg-red-100 border border-red-300 p-3 text-red-800">
+                {{ session('error') }}
+            </div>
+        @endif
 
     <hr>
 
@@ -94,10 +107,18 @@
                     </button>
 
                     <button
+                        wire:click="testPrinter({{ $printer->id }})"
+                        class="btn btn-secondary"
+                    >
+                        🖨 Testdruck
+                    </button>
+
+                    <button
                         wire:click="delete({{ $printer->id }})"
                     >
                         Löschen
                     </button>
+
 
                 </td>
 

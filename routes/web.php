@@ -78,6 +78,7 @@ Route::middleware('auth')->group(function () {
         //Druckjobs
         Route::get('/print-jobs', PrintJobsIndex::class)
             ->name('admin.print-jobs');
+
     });
 
     Route::get('/pos', PosIndex::class)
@@ -88,5 +89,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/production', ProductionIndex::class)
         ->name('production.index');
+
 
 });

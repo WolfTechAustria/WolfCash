@@ -26,6 +26,15 @@ class Device extends Model
         'status' => DeviceStatus::class,
     ];
 
+
+    protected static function booted(): void
+    {
+        static::creating(function (Device $device): void {
+            if (! $device->uuid) {
+                $device->uuid = (string) Str::uuid();
+            }
+        });
+    }
     public function approver(): BelongsTo
     {
         return $this->belongsTo(

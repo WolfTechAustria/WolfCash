@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Models\Device;
+use Illuminate\Support\Str;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,6 +21,7 @@ Route::post('/device/register', function (Request $request) {
     $device = Device::firstOrCreate(
         ['fingerprint' => $request->fingerprint],
         [
+            'uuid' => (string) Str::uuid(),
             'name' => $request->name ?? 'Unknown Device',
             'platform' => $request->platform ?? 'browser',
             'status' => 'pending',

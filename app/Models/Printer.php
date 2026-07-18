@@ -3,20 +3,32 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\ProductionStation;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Printer extends Model
 {
+    public const CONNECTION_NETWORK = 'network';
 
     protected $fillable = [
         'name',
-        'ip_address',
-        'is_active',
+        'connection_type',
+        'host',
+        'port',
+        'characters_per_line',
+        'is_enabled',
     ];
 
-    public function categories()
+    protected function casts(): array
     {
-        return $this->hasMany(ProductCategory::class);
+        return [
+            'port' => 'integer',
+            'characters_per_line' => 'integer',
+            'is_enabled' => 'boolean',
+        ];
     }
 
+    public function printJobs(): HasMany
+    {
+        return $this->hasMany(PrintJob::class);
+    }
 }
