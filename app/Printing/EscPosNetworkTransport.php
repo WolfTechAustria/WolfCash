@@ -20,9 +20,22 @@ class EscPosNetworkTransport implements PrintTransport
             );
         }
 
-        if (! $printer->host) {
+        $host = trim((string) $printer->ip_address);
+        $port = (int) ($printer->port ?: 9100);
+        $timeout = max(
+            1,
+            (int) config('printing.network_timeout', 5)
+        );
+
+        if ($host === '') {
             throw new RuntimeException(
-                "Für Drucker {$printer->name} ist kein Host konfiguriert."
+                "Für Drucker {$printer->name} ist keine IP Adresse konfiguriert konfiguriert."
+            );
+        }
+
+        if ($port < 1 || $port > 65535) {
+            throw new RuntimeException(
+                "Für Drucker {$printer->name} ist ein ungültiger Port konfiguriert."
             );
         }
 
@@ -31,9 +44,9 @@ class EscPosNetworkTransport implements PrintTransport
 
         try {
             $connector = new NetworkPrintConnector(
-                $printer->host,
-                $printer->port,
-                config('printing.network_timeout', 5)
+                $host,
+                $port,
+                $timeout
             );
 
             $escPos = new EscPosPrinter($connector);
@@ -57,7 +70,7 @@ class EscPosNetworkTransport implements PrintTransport
             );
 
             foreach ($document->lines as $line) {
-                $escPos->text($line."\n");
+                $escPos->text((string) $line."\n");
             }
 
             $escPos->feed(2);
@@ -72,17 +85,23 @@ class EscPosNetworkTransport implements PrintTransport
         } catch (Throwable $exception) {
             throw new RuntimeException(
                 sprintf(
-                    'Druck auf %s fehlgeschlagen: %s',
+                    'Druck auf %s (%s:%d) fehlgeschlagen: %s',
                     $printer->name,
+                    $host,
+                    $port,
                     $exception->getMessage()
                 ),
                 previous: $exception
             );
         } finally {
-            if ($escPos) {
-                $escPos->close();
-            } elseif ($connector) {
-                $connector->finalize();
+            try {
+                if ($escPos !== null) {
+                    $escPos->close();
+                } elseif ($connector !== null) {
+                    $connector->finalize();
+                }
+            } catch (Throwable $closeException) {
+                report($closeException);
             }
         }
     }

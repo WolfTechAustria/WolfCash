@@ -13,6 +13,7 @@ class Printer extends Model
         'name',
         'connection_type',
         'host',
+        'ip_address',
         'port',
         'characters_per_line',
         'is_enabled',

@@ -14,12 +14,12 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(
             PrintTransport::class,
-            function () {
+            function ($app) {
                 return match (config('printing.driver')) {
                     'simulation' =>
                     new SimulationPrintTransport(),
 
-                    'escpos' =>
+                    'escpos_network' =>
                     new EscPosNetworkTransport(),
 
                     default =>

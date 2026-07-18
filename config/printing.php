@@ -7,10 +7,10 @@ return [
     |--------------------------------------------------------------------------
     |
     | simulation:
-    |   Es werden keine Daten an einen Drucker gesendet.
+    |   Es werden keine Daten an einen physischen Drucker gesendet.
     |
-    | escpos:
-    |   Die Ausgabe wird über ESC/POS an den Drucker gesendet.
+    | escpos_network:
+    |   Die Ausgabe wird über TCP/IP als ESC/POS-Daten gesendet.
     |
     */
 
