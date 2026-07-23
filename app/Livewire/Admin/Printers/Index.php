@@ -11,6 +11,7 @@ class Index extends Component
     public string $name = '';
     public string $ip_address = '';
     public bool $is_active = true;
+    public bool $is_enabled = true;
     public ?int $editingId = null;
 
     protected function rules(): array
