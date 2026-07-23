@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Table;
 use Illuminate\Support\Facades\DB;
+use App\Jobs\ProcessPrintJob;
 
 class OrderService
 {

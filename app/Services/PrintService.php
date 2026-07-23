@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\PrintJob;
 use App\Models\Product;
+use App\Jobs\ProcessPrintJob;
 
 class PrintService
 {
@@ -65,7 +66,7 @@ class PrintService
                 continue;
             }
 
-            PrintJob::create([
+            $printJob = PrintJob::create([
                 'order_id' => $order->id,
                 'printer_id' => $jobData['printer_id'],
                 'production_station_id' => $jobData['production_station_id'],
@@ -77,6 +78,9 @@ class PrintService
                     'items' => $jobData['items'],
                 ],
             ]);
+
+            ProcessPrintJob::dispatch($printJob->id)
+                ->afterCommit();
         }
     }
 }
