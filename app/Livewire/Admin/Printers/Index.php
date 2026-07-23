@@ -18,6 +18,7 @@ class Index extends Component
         return [
             'name' => 'required|max:255',
             'ip_address' => 'nullable|max:255',
+            'is_enabled' => ['boolean'],
         ];
     }
 
