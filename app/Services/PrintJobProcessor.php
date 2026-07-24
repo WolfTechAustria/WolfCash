@@ -19,17 +19,10 @@ class PrintJobProcessor
 
     public function process(PrintJob $job): void
     {
-        /*
-         * Verhindert, dass ein bereits erfolgreich gedruckter Job
-         * versehentlich nochmals ausgegeben wird.
-         */
         if ($job->status === PrintJob::STATUS_PRINTED) {
             return;
         }
 
-        /*
-         * Der Druckjob muss einem Drucker zugewiesen sein.
-         */
         if (! $job->printer_id) {
             $this->markAsFailed(
                 $job,
@@ -39,15 +32,11 @@ class PrintJobProcessor
             return;
         }
 
-        /*
-         * Alle für Renderer und Transport benötigten Relationen laden.
-         *
-         * Bereits geladene Relationen werden dabei nicht erneut abgefragt.
-         */
         $job->loadMissing([
             'printer',
             'order.table',
             'order.items.product',
+            'productionStation',
         ]);
 
         if (! $job->printer) {
@@ -68,9 +57,6 @@ class PrintJobProcessor
             return;
         }
 
-        /*
-         * Der Job befindet sich ab jetzt in Verarbeitung.
-         */
         $job->update([
             'status' => PrintJob::STATUS_PRINTING,
             'error_message' => null,
@@ -78,57 +64,55 @@ class PrintJobProcessor
 
         try {
             /*
-             * Der Renderer erzeugt das druckerunabhängige Dokument.
+             * Ein PrintJob kann jetzt mehrere physische
+             * Dokumente beziehungsweise Papierbons erzeugen.
              */
-            $document = $this->renderer->render($job);
+            $documents = $this->renderer->render($job);
 
-            /*
-             * Der konfigurierte Transport übernimmt die physische
-             * oder simulierte Ausgabe.
-             */
-            $this->transport->print(
-                $job->printer,
-                $document
-            );
+            if ($documents === []) {
+                throw new RuntimeException(
+                    'Der Renderer hat keine Druckdokumente erzeugt.'
+                );
+            }
 
-            /*
-             * Nur der Druckstatus wird hier abgeschlossen.
-             *
-             * production_completed_at wird ausschließlich durch
-             * den Produktionsmonitor gesetzt, wenn Küche oder Bar
-             * die Positionen tatsächlich fertiggestellt haben.
-             */
+            foreach ($documents as $document) {
+                $this->transport->print(
+                    $job->printer,
+                    $document
+                );
+            }
+
             $job->update([
                 'status' => PrintJob::STATUS_PRINTED,
                 'printed_at' => now(),
                 'error_message' => null,
             ]);
 
-            Log::info('Druckauftrag erfolgreich verarbeitet.', [
-                'print_job_id' => $job->id,
-                'printer_id' => $job->printer_id,
-                'order_id' => $job->order_id,
-            ]);
+            Log::info(
+                'Druckauftrag erfolgreich verarbeitet.',
+                [
+                    'print_job_id' => $job->id,
+                    'printer_id' => $job->printer_id,
+                    'order_id' => $job->order_id,
+                    'document_count' => count($documents),
+                ]
+            );
         } catch (Throwable $exception) {
             $this->markAsFailed(
                 $job,
                 $exception->getMessage()
             );
 
-            Log::error('Druckauftrag fehlgeschlagen.', [
-                'print_job_id' => $job->id,
-                'printer_id' => $job->printer_id,
-                'order_id' => $job->order_id,
-                'exception' => $exception,
-            ]);
+            Log::error(
+                'Druckauftrag fehlgeschlagen.',
+                [
+                    'print_job_id' => $job->id,
+                    'printer_id' => $job->printer_id,
+                    'order_id' => $job->order_id,
+                    'exception' => $exception,
+                ]
+            );
 
-            /*
-             * Wichtig für die Laravel Queue:
-             *
-             * Die Exception wird erneut geworfen, damit der Queue-Job
-             * als fehlgeschlagen gilt und gemäß Retry-Konfiguration
-             * erneut versucht wird.
-             */
             throw new RuntimeException(
                 sprintf(
                     'PrintJob #%d konnte nicht verarbeitet werden: %s',
