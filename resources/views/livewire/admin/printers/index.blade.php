@@ -37,6 +37,29 @@
             placeholder="IP-Adresse"
         >
 
+            <label class="block text-sm font-medium">
+                Druckzeitpunkt
+            </label>
+
+            <select
+                wire:model="print_trigger"
+                class="mt-1 w-full rounded border-gray-300"
+            >
+                <option value="immediate">
+                    Sofort beim Bonieren
+                </option>
+
+                <option value="on_job_complete">
+                    Erst wenn der gesamte Produktionsbon fertig ist
+                </option>
+            </select>
+
+            @error('print_trigger')
+            <div class="mt-1 text-sm text-red-600">
+                {{ $message }}
+            </div>
+            @enderror
+
         <button type="submit">
             Speichern
         </button>

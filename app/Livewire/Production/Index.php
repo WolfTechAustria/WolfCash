@@ -9,6 +9,8 @@ use Illuminate\Support\Collection;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
+use App\Jobs\ProcessPrintJob;
+use App\Models\Printer;
 
 class Index extends Component
 {
@@ -111,10 +113,7 @@ class Index extends Component
         });
     }
 
-    public function completeGroupedItem(
-        int $jobId,
-        int $itemId
-    ): void {
+    public function completeGroupedItem(int $jobId, int $itemId): void {
         $job = PrintJob::query()
             ->whereNull('production_completed_at')
             ->findOrFail($jobId);
@@ -124,10 +123,7 @@ class Index extends Component
             ->filter()
             ->map(fn ($id) => (int) $id);
 
-        abort_unless(
-            $payloadItemIds->contains($itemId),
-            404
-        );
+        abort_unless($payloadItemIds->contains($itemId), 404);
 
         $item = OrderItem::findOrFail($itemId);
 
@@ -142,10 +138,7 @@ class Index extends Component
         );
     }
 
-    public function reopenGroupedItem(
-        int $jobId,
-        int $itemId
-    ): void {
+    public function reopenGroupedItem(int $jobId, int $itemId): void {
         $job = PrintJob::query()
             ->whereNull('production_completed_at')
             ->findOrFail($jobId);
@@ -179,28 +172,30 @@ class Index extends Component
             ->filter()
             ->map(fn ($id) => (int) $id);
 
-        if ($itemIds->isNotEmpty()) {
-            $items = OrderItem::query()
-                ->whereIn('id', $itemIds)
-                ->get();
+        DB::transaction(function () use ($job, $itemIds): void {
+            if ($itemIds->isNotEmpty()) {
+                $items = OrderItem::query()
+                    ->whereIn('id', $itemIds)
+                    ->lockForUpdate()
+                    ->get();
 
-            foreach ($items as $item) {
-                $item->update([
-                    'production_completed_quantity' => $item->quantity,
-                    'production_status' => OrderItem::PRODUCTION_DONE,
-                ]);
+                foreach ($items as $item) {
+                    $item->update([
+                        'production_completed_quantity' => $item->quantity,
+                        'production_status' => OrderItem::PRODUCTION_DONE,
+                    ]);
+                }
             }
-        }
 
-        $job->update([
-            'production_completed_at' => now(),
-        ]);
+            $job->update([
+                'production_completed_at' => now(),
+            ]);
+        });
+
+        $this->releasePrintJobIfRequired($job);
     }
 
-    private function finishJobWhenAllItemsAreDone(
-        PrintJob $job,
-        Collection $itemIds
-    ): void {
+    private function finishJobWhenAllItemsAreDone(PrintJob $job, Collection $itemIds): void {
         if ($itemIds->isEmpty()) {
             return;
         }
@@ -218,7 +213,40 @@ class Index extends Component
             $job->update([
                 'production_completed_at' => now(),
             ]);
+
+            $this->releasePrintJobIfRequired($job);
         }
+    }
+
+    private function releasePrintJobIfRequired(PrintJob $job): void
+    {
+        $job->refresh();
+        $job->loadMissing('printer');
+
+        if (! $job->printer) {
+            return;
+        }
+
+        if (
+            $job->printer->print_trigger
+            !== Printer::PRINT_TRIGGER_ON_JOB_COMPLETE
+        ) {
+            return;
+        }
+
+        if ($job->status === PrintJob::STATUS_PRINTED) {
+            return;
+        }
+
+        if ($job->ready_to_print) {
+            return;
+        }
+
+        $job->update([
+            'ready_to_print' => true,
+        ]);
+
+        ProcessPrintJob::dispatch($job->id);
     }
 
     public function render()

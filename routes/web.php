@@ -29,6 +29,17 @@ Route::view('/', 'welcome');
 
 Route::view('/login', 'auth.login')->name('login');
 
+
+Route::get('/pos', PosIndex::class)
+    ->name('pos.index');
+
+Route::get('/pos/checkout/{table}', Checkout::class)
+    ->name('pos.checkout');
+
+Route::get('/production', ProductionIndex::class)
+    ->name('production.index');
+
+
 /*
 |--------------------------------------------------------------------------
 | Protected Routes
@@ -80,15 +91,4 @@ Route::middleware('auth')->group(function () {
             ->name('admin.print-jobs');
 
     });
-
-    Route::get('/pos', PosIndex::class)
-        ->name('pos.index');
-
-    Route::get('/pos/checkout/{table}', Checkout::class)
-        ->name('pos.checkout');
-
-    Route::get('/production', ProductionIndex::class)
-        ->name('production.index');
-
-
 });

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\PrintJob;
+use App\Services\PrintJobProcessor;
 use Illuminate\Console\Command;
 
 class ProcessPrintJobs extends Command
@@ -11,25 +12,38 @@ class ProcessPrintJobs extends Command
 
     protected $description = 'Process pending print jobs';
 
-    public function handle(): int
+    public function handle(PrintJobProcessor $processor): int
     {
-        $jobs = PrintJob::where('status', PrintJob::STATUS_PENDING)
+        $limit = max(1,(int)$this->option('limit'));
+
+        $jobs = PrintJob::query()
+            ->where('status', PrintJob::STATUS_PENDING)
+            ->where('ready_to_print', true)
+            ->whereNotNull('printer_id')
             ->oldest()
+            ->limit($limit)
             ->get();
 
+        if($jobs->isEmpty()) {
+            $this->info('keine offenen Druckjobs');
+            return self::SUCCESS;
+        }
+
         foreach ($jobs as $job) {
-            $job->update([
-                'status' => PrintJob::STATUS_PRINTING,
-            ]);
+            $this->line('Verarbeite PrintJob #{$job->id} ...');
+            try{
+                $processor->process($job);
 
-            // Simulation: später kommt hier echter Drucker-Code hin.
-            $job->update([
-                'status' => PrintJob::STATUS_PRINTED,
-                'printed_at' => now(),
-                'error_message' => null,
-            ]);
+                $job->refresh();
+                if($job->status === PrintJob:: STATUS_PENDING) {
+                    $this->info('Druckjob #{$job->id} erfolgreich abgeschlossen');
+                } else {
+                    $this->error('PrintJob #{$job->id} fehlgeschlagen: '.$job->error_message);
+                }
+            } catch (\Throwable $exception) {
+                $this->error('PrintJob #{$job->id} fehlgeschlagen: '.$exception->getMessage());
+            }
 
-            $this->info("Print job {$job->id} marked as printed.");
         }
 
         return self::SUCCESS;

@@ -14,7 +14,7 @@ class EscPosNetworkTransport implements PrintTransport
         PrinterModel $printer,
         RenderedPrint $document
     ): void {
-        if (! $printer->is_enabled) {
+        if (! $printer->is_active) {
             throw new RuntimeException(
                 "Drucker {$printer->name} ist deaktiviert."
             );

@@ -3,49 +3,84 @@
 namespace App\Livewire\Admin\Printers;
 
 use App\Models\Printer;
-use Livewire\Component;
 use App\Services\PrinterTestService;
+use Illuminate\Validation\Rule;
+use Livewire\Component;
+use Throwable;
 
 class Index extends Component
 {
     public string $name = '';
+
     public string $ip_address = '';
+
+    public int $port = 9100;
+
     public bool $is_active = true;
-    public bool $is_enabled = true;
+
+    public string $print_trigger = Printer::PRINT_TRIGGER_IMMEDIATE;
+
     public ?int $editingId = null;
 
     protected function rules(): array
     {
         return [
-            'name' => 'required|max:255',
-            'ip_address' => 'nullable|max:255',
-            'is_enabled' => ['boolean'],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'ip_address' => [
+                'nullable',
+                'ip',
+            ],
+
+            'port' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:65535',
+            ],
+
+            'is_active' => [
+                'boolean',
+            ],
+
+            'print_trigger' => [
+                'required',
+                Rule::in([
+                    Printer::PRINT_TRIGGER_IMMEDIATE,
+                    Printer::PRINT_TRIGGER_ON_JOB_COMPLETE,
+                ]),
+            ],
         ];
     }
 
     public function save(): void
     {
-        $this->validate();
+        $data = $this->validate();
 
-        $data = [
-            'name' => $this->name,
-            'ip_address' => $this->ip_address,
-            'is_active' => $this->is_active,
-        ];
+        /*
+         * Ein leeres Eingabefeld sauber als NULL speichern.
+         */
+        $data['ip_address'] = $data['ip_address'] !== ''
+            ? $data['ip_address']
+            : null;
 
-        if ($this->editingId) {
-            Printer::findOrFail($this->editingId)->update($data);
+        if ($this->editingId !== null) {
+            Printer::findOrFail($this->editingId)
+                ->update($data);
         } else {
             Printer::create($data);
         }
 
-        $this->reset([
-            'name',
-            'ip_address',
-            'editingId',
-        ]);
+        $this->resetForm();
 
-        $this->is_active = true;
+        session()->flash(
+            'success',
+            'Drucker erfolgreich gespeichert.'
+        );
     }
 
     public function edit(int $id): void
@@ -55,7 +90,18 @@ class Index extends Component
         $this->editingId = $printer->id;
         $this->name = $printer->name;
         $this->ip_address = $printer->ip_address ?? '';
-        $this->is_active = $printer->is_active;
+        $this->port = (int) ($printer->port ?: 9100);
+        $this->is_active = (bool) $printer->is_active;
+
+        $this->print_trigger = $printer->print_trigger
+            ?? Printer::PRINT_TRIGGER_IMMEDIATE;
+
+        $this->resetValidation();
+    }
+
+    public function cancelEdit(): void
+    {
+        $this->resetForm();
     }
 
     public function toggle(int $id): void
@@ -63,20 +109,35 @@ class Index extends Component
         $printer = Printer::findOrFail($id);
 
         $printer->update([
-            'is_active' => !$printer->is_active,
+            'is_active' => ! $printer->is_active,
         ]);
     }
 
     public function delete(int $id): void
     {
-        $printer = Printer::withCount('categories')->findOrFail($id);
+        $printer = Printer::query()
+            ->withCount('categories')
+            ->findOrFail($id);
 
         if ($printer->categories_count > 0) {
-            $this->addError('delete', 'Dieser Drucker kann nicht gelöscht werden, solange Kategorien zugeordnet sind.');
+            $this->addError(
+                'delete',
+                'Dieser Drucker kann nicht gelöscht werden, solange Kategorien zugeordnet sind.'
+            );
+
             return;
         }
 
         $printer->delete();
+
+        if ($this->editingId === $id) {
+            $this->resetForm();
+        }
+
+        session()->flash(
+            'success',
+            'Drucker erfolgreich gelöscht.'
+        );
     }
 
     public function testPrinter(int $printerId): void
@@ -89,18 +150,33 @@ class Index extends Component
 
             session()->flash(
                 'success',
-                'Testdruck erfolgreich gesendet.'
+                "Testdruck an '{$printer->name}' erfolgreich gesendet."
             );
-
-        } catch (\Throwable $e) {
-
-            report($e);
+        } catch (Throwable $exception) {
+            report($exception);
 
             session()->flash(
                 'error',
-                $e->getMessage()
+                $exception->getMessage()
             );
         }
+    }
+
+    private function resetForm(): void
+    {
+        $this->reset([
+            'name',
+            'ip_address',
+            'editingId',
+        ]);
+
+        $this->port = 9100;
+        $this->is_active = true;
+
+        $this->print_trigger =
+            Printer::PRINT_TRIGGER_IMMEDIATE;
+
+        $this->resetValidation();
     }
 
     public function render()
@@ -108,7 +184,9 @@ class Index extends Component
         return view(
             'livewire.admin.printers.index',
             [
-                'printers' => Printer::orderBy('name')->get(),
+                'printers' => Printer::query()
+                    ->orderBy('name')
+                    ->get(),
             ]
         )->layout('components.layouts.app');
     }

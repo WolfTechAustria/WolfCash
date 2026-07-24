@@ -25,12 +25,14 @@ class PrintJob extends Model
         'production_station_id',
         'error_message',
         'production_completed_at',
+        'ready_to_print',
     ];
 
     protected function casts(): array
     {
         return [
             'payload' => 'array',
+            'ready_to_print' => 'boolean',
             'printed_at' => 'datetime',
             'production_completed_at' => 'datetime',
         ];

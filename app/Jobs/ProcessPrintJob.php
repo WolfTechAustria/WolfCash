@@ -59,6 +59,15 @@ class ProcessPrintJob implements ShouldQueue
             return;
         }
 
+        /*
+         * Noch nicht freigegebene Produktionsbons dürfen
+         * nicht gedruckt werden.
+         */
+
+        if (! $printJob->ready_to_print) {
+            return;
+        }
+
         $processor->process($printJob);
 
         $printJob->refresh();
