@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PrintJob extends Model
 {
@@ -53,5 +54,10 @@ class PrintJob extends Model
         return $this->belongsTo(
             ProductionStation::class
         );
+    }
+
+    public function outputs(): HasMany
+    {
+        return $this->hasMany(PrintOutput::class);
     }
 }

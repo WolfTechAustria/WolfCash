@@ -42,6 +42,7 @@ class OrderItem extends Model
         return [
             'paid_at' => 'datetime',
             'production_completed_quantity' => 'integer',
+            'production_printed_quantity' => 'integer',
         ];
     }
 }

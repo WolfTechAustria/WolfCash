@@ -52,6 +52,10 @@
                 <option value="on_job_complete">
                     Erst wenn der gesamte Produktionsbon fertig ist
                 </option>
+
+                <option value="{{ \App\Models\Printer::PRINT_TRIGGER_ON_ITEM_COMPLETE }}">
+                    Sobald eine Position fertig ist
+                </option>
             </select>
 
             @error('print_trigger')

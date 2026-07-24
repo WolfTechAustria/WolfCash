@@ -53,6 +53,7 @@ class OrderService
                     'status' => OrderItem::STATUS_PENDING,
                     'production_status' => OrderItem::PRODUCTION_PENDING,
                     'production_completed_quantity' => 0,
+                    'production_printed_quantity' => 0,
                 ]);
 
                 $createdItems[] = $orderItem;

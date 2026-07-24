@@ -11,6 +11,9 @@ use Livewire\Component;
 use Illuminate\Support\Facades\DB;
 use App\Jobs\ProcessPrintJob;
 use App\Models\Printer;
+use App\Jobs\ProcessPrintOutput;
+use App\Models\PrintOutput;
+use App\Models\Product;
 
 class Index extends Component
 {
@@ -63,6 +66,11 @@ class Index extends Component
                 },
             ]);
         });
+
+        $this->releaseItemOutputsIfRequired(
+            $job,
+            $itemId
+        );
 
         $this->finishJobWhenAllItemsAreDone(
             $job,
@@ -132,6 +140,11 @@ class Index extends Component
             'production_status' => OrderItem::PRODUCTION_DONE,
         ]);
 
+        $this->releaseItemOutputsIfRequired(
+            $job,
+            $itemId
+        );
+
         $this->finishJobWhenAllItemsAreDone(
             $job,
             $payloadItemIds
@@ -192,6 +205,13 @@ class Index extends Component
             ]);
         });
 
+        foreach ($itemIds as $itemId) {
+            $this->releaseItemOutputsIfRequired(
+                $job,
+                (int) $itemId
+            );
+        }
+
         $this->releasePrintJobIfRequired($job);
     }
 
@@ -247,6 +267,136 @@ class Index extends Component
         ]);
 
         ProcessPrintJob::dispatch($job->id);
+    }
+
+    private function releaseItemOutputsIfRequired(
+        PrintJob $job,
+        int $itemId
+    ): void {
+        $job->loadMissing('printer');
+
+        if (! $job->printer) {
+            return;
+        }
+
+        if (
+            $job->printer->print_trigger
+            !== Printer::PRINT_TRIGGER_ON_ITEM_COMPLETE
+        ) {
+            return;
+        }
+
+        $payloadItem = collect($job->payload['items'] ?? [])
+            ->first(
+                fn (array $item) =>
+                    (int) ($item['order_item_id'] ?? 0) === $itemId
+            );
+
+        if (! $payloadItem) {
+            return;
+        }
+
+        $outputIds = DB::transaction(
+            function () use ($job, $itemId, $payloadItem): array {
+                $item = OrderItem::query()
+                    ->lockForUpdate()
+                    ->findOrFail($itemId);
+
+                $printMode = $payloadItem['print_mode']
+                    ?? Product::PRINT_GROUPED;
+
+                /*
+                 * Bereits erzeugte PrintOutputs zählen.
+                 *
+                 * Auch pending/failed zählen mit, da fehlgeschlagene
+                 * Ausgaben über denselben Queue-Job wiederholt werden.
+                 */
+                $existingOutputCount = PrintOutput::query()
+                    ->where('print_job_id', $job->id)
+                    ->where('order_item_id', $item->id)
+                    ->count();
+
+                /*
+                 * Beim Einzelbon entspricht jede fertige Einheit
+                 * genau einem physischen Bon.
+                 */
+                if ($printMode === Product::PRINT_SPLIT) {
+                    $desiredOutputCount = min(
+                        $item->production_completed_quantity,
+                        $item->quantity
+                    );
+
+                    $outputsToCreate = max(
+                        0,
+                        $desiredOutputCount - $existingOutputCount
+                    );
+
+                    $outputIds = [];
+
+                    for ($number = 0; $number < $outputsToCreate; $number++) {
+                        $output = PrintOutput::create([
+                            'print_job_id' => $job->id,
+                            'order_item_id' => $item->id,
+                            'printer_id' => $job->printer_id,
+                            'quantity' => 1,
+                            'type' => PrintOutput::TYPE_PRODUCTION,
+                            'status' => PrintOutput::STATUS_PENDING,
+                            'payload' => [
+                                'table' => $job->payload['table'] ?? null,
+                                'name' => $payloadItem['name']
+                                    ?? $item->product?->name
+                                        ?? 'Unbekanntes Produkt',
+                                'quantity' => 1,
+                                'note' => $payloadItem['note']
+                                    ?? $item->note,
+                                'print_mode' => $printMode,
+                            ],
+                        ]);
+
+                        $outputIds[] = $output->id;
+                    }
+
+                    return $outputIds;
+                }
+
+                /*
+                 * Gruppenposition:
+                 * Erst wenn die gesamte Position fertig ist,
+                 * genau einen Bon mit der Gesamtmenge erzeugen.
+                 */
+                if (
+                    $item->production_completed_quantity < $item->quantity
+                    || $existingOutputCount > 0
+                ) {
+                    return [];
+                }
+
+                $output = PrintOutput::create([
+                    'print_job_id' => $job->id,
+                    'order_item_id' => $item->id,
+                    'printer_id' => $job->printer_id,
+                    'quantity' => $item->quantity,
+                    'type' => PrintOutput::TYPE_PRODUCTION,
+                    'status' => PrintOutput::STATUS_PENDING,
+                    'payload' => [
+                        'table' => $job->payload['table'] ?? null,
+                        'name' => $payloadItem['name']
+                            ?? $item->product?->name
+                                ?? 'Unbekanntes Produkt',
+                        'quantity' => $item->quantity,
+                        'note' => $payloadItem['note']
+                            ?? $item->note,
+                        'print_mode' => $printMode,
+                    ],
+                ]);
+
+                return [$output->id];
+            }
+        );
+
+        foreach ($outputIds as $outputId) {
+            ProcessPrintOutput::dispatch($outputId);
+        }
     }
 
     public function render()

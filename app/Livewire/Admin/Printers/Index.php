@@ -52,6 +52,7 @@ class Index extends Component
                 Rule::in([
                     Printer::PRINT_TRIGGER_IMMEDIATE,
                     Printer::PRINT_TRIGGER_ON_JOB_COMPLETE,
+                    Printer::PRINT_TRIGGER_ON_ITEM_COMPLETE,
                 ]),
             ],
         ];
