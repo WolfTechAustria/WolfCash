@@ -36,4 +36,17 @@ class Order extends Model
     {
         return $this->hasMany(PrintJob::class);
     }
+
+    public function recalculateTotal(): void
+    {
+        $total = $this->items()
+            ->selectRaw(
+                'COALESCE(SUM((quantity - cancelled_quantity) * price), 0) AS total'
+            )
+            ->value('total');
+
+        $this->update([
+            'total' => $total,
+        ]);
+    }
 }

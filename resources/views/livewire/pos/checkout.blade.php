@@ -99,7 +99,7 @@
 
                     @php
                         $selectedQuantity = $selectedForPayment[$item->id] ?? 0;
-                        $openQuantity = $item->quantity - $selectedQuantity;
+                        $openQuantity = $item->open_quantity - $selectedQuantity;
                     @endphp
 
                     @if($openQuantity > 0)

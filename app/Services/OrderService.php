@@ -59,10 +59,7 @@ class OrderService
                 $createdItems[] = $orderItem;
             }
 
-            $order->update([
-                'total' => $order->items()
-                    ->sum(DB::raw('quantity * price')),
-            ]);
+            $order->recalculateTotal();
 
             $table->update([
                 'status' => 'occupied',

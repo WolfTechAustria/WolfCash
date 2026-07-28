@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderItem extends Model
 {
@@ -16,6 +17,10 @@ class OrderItem extends Model
         'paid_at',
         'production_status',
         'production_completed_quantity',
+        'cancelled_quantity',
+        'cancelled_at',
+        'cancelled_by',
+        'cancellation_reason',
     ];
 
     public const STATUS_PENDING = 'pending';
@@ -43,6 +48,30 @@ class OrderItem extends Model
             'paid_at' => 'datetime',
             'production_completed_quantity' => 'integer',
             'production_printed_quantity' => 'integer',
+            'quantity' => 'integer',
+            'cancelled_quantity' => 'integer',
+            'cancelled_at' => 'datetime',
         ];
+    }
+
+    public function cancelledByUser(): BelongsTo
+    {
+        return $this->belongsTo(
+            User::class,
+            'cancelled_by'
+        );
+    }
+
+    public function getOpenQuantityAttribute(): int
+    {
+        return max(
+            0,
+            $this->quantity - $this->cancelled_quantity
+        );
+    }
+
+    public function getIsFullyCancelledAttribute(): bool
+    {
+        return $this->cancelled_quantity >= $this->quantity;
     }
 }
