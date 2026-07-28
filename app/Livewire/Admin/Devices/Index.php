@@ -30,6 +30,6 @@ class Index extends Component
     {
         return view('livewire.admin.devices.index', [
             'devices' => Device::latest()->get(),
-        ])->layout('components.layouts.app');;
+        ])->layout('components.layouts.app');
     }
 }

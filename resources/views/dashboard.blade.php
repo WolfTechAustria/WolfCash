@@ -1,11 +1,4 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Dashboard</title>
-</head>
-<body>
-
-<h1>Dashboard</h1>
-
-</body>
-</html>
+<x-layouts.app>
+    <h1 class="font-display text-2xl font-semibold tracking-tight">Dashboard</h1>
+    <p class="mt-2 text-dim">Willkommen zurück.</p>
+</x-layouts.app>

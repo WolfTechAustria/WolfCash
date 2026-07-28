@@ -1,160 +1,133 @@
 <div>
 
+    <div class="mb-5">
+        <h1 class="font-display text-2xl font-semibold tracking-tight">
+            @if($editingId)
+                Drucker bearbeiten
+            @else
+                Drucker
+            @endif
+        </h1>
+        <p class="mt-1 text-sm text-dim">Bondrucker verwalten und Druckzeitpunkt festlegen.</p>
+    </div>
 
-    <h1>
-        @if($editingId)
-            Drucker bearbeiten
-        @else
-            Drucker
-        @endif
-    </h1>
+    @if(session('success'))
+        <div class="mb-4 rounded-lg border border-free/40 bg-free-soft px-4 py-2.5 text-sm text-free">
+            {{ session('success') }}
+        </div>
+    @endif
 
-        @if(session('success'))
-            <div class="mb-4 rounded bg-green-100 border border-green-300 p-3 text-green-800">
-                {{ session('success') }}
-            </div>
-        @endif
+    @if(session('error'))
+        <div class="mb-4 rounded-lg border border-occupied/40 bg-occupied-soft px-4 py-2.5 text-sm text-occupied">
+            {{ session('error') }}
+        </div>
+    @endif
 
-        @if(session('error'))
-            <div class="mb-4 rounded bg-red-100 border border-red-300 p-3 text-red-800">
-                {{ session('error') }}
-            </div>
-        @endif
+    <form wire:submit="save" class="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-surface p-4">
 
-    <hr>
+        <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-dim">Name</label>
+            <input
+                type="text"
+                wire:model="name"
+                placeholder="z. B. Küchendrucker"
+                class="w-48 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm placeholder:text-dim/60 focus:border-accent focus:outline-none"
+            >
+        </div>
 
-    <form wire:submit="save">
+        <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-dim">IP-Adresse</label>
+            <input
+                type="text"
+                wire:model="ip_address"
+                placeholder="192.168.1.50"
+                class="w-40 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm placeholder:text-dim/60 focus:border-accent focus:outline-none"
+            >
+        </div>
 
-        <input
-            type="text"
-            wire:model="name"
-            placeholder="Name"
-        >
-
-        <input
-            type="text"
-            wire:model="ip_address"
-            placeholder="IP-Adresse"
-        >
-
-            <label class="block text-sm font-medium">
-                Druckzeitpunkt
-            </label>
-
+        <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-dim">Druckzeitpunkt</label>
             <select
                 wire:model="print_trigger"
-                class="mt-1 w-full rounded border-gray-300"
+                class="w-64 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm focus:border-accent focus:outline-none"
             >
-                <option value="immediate">
-                    Sofort beim Bonieren
-                </option>
-
-                <option value="on_job_complete">
-                    Erst wenn der gesamte Produktionsbon fertig ist
-                </option>
-
-                <option value="{{ \App\Models\Printer::PRINT_TRIGGER_ON_ITEM_COMPLETE }}">
-                    Sobald eine Position fertig ist
-                </option>
+                <option value="immediate">Sofort beim Bonieren</option>
+                <option value="on_job_complete">Erst wenn der gesamte Bon fertig ist</option>
+                <option value="{{ \App\Models\Printer::PRINT_TRIGGER_ON_ITEM_COMPLETE }}">Sobald eine Position fertig ist</option>
             </select>
-
             @error('print_trigger')
-            <div class="mt-1 text-sm text-red-600">
-                {{ $message }}
-            </div>
+            <span class="text-xs text-occupied">{{ $message }}</span>
             @enderror
+        </div>
 
-        <button type="submit">
+        <button type="submit" class="rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-accent-ink transition hover:bg-accent-strong">
             Speichern
         </button>
 
     </form>
 
-    <hr>
-
     @error('delete')
-    <div style="color:red;">
+    <div class="mb-4 rounded-lg border border-occupied/40 bg-occupied-soft px-4 py-2.5 text-sm text-occupied">
         {{ $message }}
     </div>
     @enderror
 
-    <table border="1" cellpadding="10">
-
-        <thead>
-
-        <tr>
-
-            <th>Name</th>
-            <th>IP</th>
-            <th>Status</th>
-            <th>Aktion</th>
-
-        </tr>
-
-        </thead>
-
-        <tbody>
-
-        @foreach($printers as $printer)
-
+    <div class="overflow-x-auto rounded-2xl border border-line">
+        <table class="w-full text-sm">
+            <thead class="bg-surface-2 text-xs uppercase tracking-wide text-dim">
             <tr>
-
-                <td>
-                    {{ $printer->name }}
-                </td>
-
-                <td>
-                    {{ $printer->ip_address }}
-                </td>
-
-                <td>
-
-                    @if($printer->is_active)
-
-                        Aktiv
-
-                    @else
-
-                        Inaktiv
-
-                    @endif
-
-                </td>
-
-                <td>
-
-                    <button
-                        wire:click="toggle({{ $printer->id }})"
-                    >
-                        Status
-                    </button>
-
-                    <button wire:click="edit({{ $printer->id }})">
-                        Bearbeiten
-                    </button>
-
-                    <button
-                        wire:click="testPrinter({{ $printer->id }})"
-                        class="btn btn-secondary"
-                    >
-                        🖨 Testdruck
-                    </button>
-
-                    <button
-                        wire:click="delete({{ $printer->id }})"
-                    >
-                        Löschen
-                    </button>
-
-
-                </td>
-
+                <th class="px-4 py-3 text-left font-medium">Name</th>
+                <th class="px-4 py-3 text-left font-medium">IP</th>
+                <th class="px-4 py-3 text-left font-medium">Status</th>
+                <th class="px-4 py-3 text-right font-medium">Aktion</th>
             </tr>
-
-        @endforeach
-
-        </tbody>
-
-    </table>
+            </thead>
+            <tbody class="divide-y divide-line">
+            @forelse($printers as $printer)
+                <tr class="transition hover:bg-surface-2/40">
+                    <td class="px-4 py-3 font-medium">{{ $printer->name }}</td>
+                    <td class="px-4 py-3 text-dim">{{ $printer->ip_address }}</td>
+                    <td class="px-4 py-3">
+                            <span class="rounded-full px-2.5 py-0.5 text-xs font-medium {{ $printer->is_active ? 'bg-free/15 text-free' : 'bg-occupied/15 text-occupied' }}">
+                                {{ $printer->is_active ? 'Aktiv' : 'Inaktiv' }}
+                            </span>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <div class="flex flex-wrap justify-end gap-2">
+                            <button
+                                wire:click="toggle({{ $printer->id }})"
+                                class="rounded-full border border-line px-3 py-1 text-xs font-medium text-dim transition hover:border-accent hover:text-accent"
+                            >
+                                Status
+                            </button>
+                            <button
+                                wire:click="edit({{ $printer->id }})"
+                                class="rounded-full border border-line px-3 py-1 text-xs font-medium text-dim transition hover:border-accent hover:text-accent"
+                            >
+                                Bearbeiten
+                            </button>
+                            <button
+                                wire:click="testPrinter({{ $printer->id }})"
+                                class="rounded-full border border-accent/40 px-3 py-1 text-xs font-medium text-accent transition hover:bg-accent/10"
+                            >
+                                🖨 Testdruck
+                            </button>
+                            <button
+                                wire:click="delete({{ $printer->id }})"
+                                class="rounded-full border border-occupied/40 px-3 py-1 text-xs font-medium text-occupied transition hover:bg-occupied/10"
+                            >
+                                Löschen
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="4" class="px-4 py-8 text-center text-dim">Noch keine Drucker angelegt.</td>
+                </tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
 
 </div>
