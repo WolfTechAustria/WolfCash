@@ -98,8 +98,14 @@
                 @foreach($this->openItems as $item)
 
                     @php
-                        $selectedQuantity = $selectedForPayment[$item->id] ?? 0;
-                        $openQuantity = $item->open_quantity - $selectedQuantity;
+                        $selectedQuantity = (int) (
+                            $selectedForPayment[$item->id] ?? 0
+                        );
+
+                        $openQuantity = max(
+                            0,
+                            $item->open_quantity - $selectedQuantity
+                        );
                     @endphp
 
                     @if($openQuantity > 0)
@@ -131,10 +137,17 @@
                     @foreach($selectedForPayment as $itemId => $quantity)
 
                         @php
-                            $item = $order->items->firstWhere('id', (int) $itemId);
+                            $item = $order->items->firstWhere(
+                                'id',
+                                (int) $itemId
+                            );
+
+                            $quantity = $item
+                                ? min((int) $quantity, $item->open_quantity)
+                                : 0;
                         @endphp
 
-                        @if($item)
+                        @if($item && $quantity > 0)
                             <button
                                 wire:click="removeFromPayment({{ $item->id }})"
                                 class="flex items-center justify-between rounded-xl border border-accent/50 bg-accent/10 px-4 py-3 text-left transition active:scale-[0.99]"

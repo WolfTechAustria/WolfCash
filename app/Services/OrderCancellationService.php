@@ -76,10 +76,46 @@ class OrderCancellationService
 
             $order->recalculateTotal();
 
+            $this->closeOrderIfSettled($order);
+
             return $lockedItem->fresh([
                 'product',
                 'order',
             ]);
         });
+    }
+
+    private function closeOrderIfSettled(Order $order): void
+    {
+        $openAmount = (float) $order->items()
+            ->whereNull('paid_at')
+            ->selectRaw(
+                'COALESCE(SUM((quantity - cancelled_quantity) * price), 0) AS open_amount'
+            )
+            ->value('open_amount');
+
+        if ($openAmount > 0.009) {
+            return;
+        }
+
+        /*
+         * Gab es bereits Zahlungen, wurde die Bestellung regulär
+         * abgerechnet und der verbleibende Rest anschließend storniert.
+         *
+         * Ohne Zahlung handelt es sich um ein vollständiges Storno.
+         */
+        $status = $order->payments()->exists()
+            ? Order::STATUS_PAID
+            : Order::STATUS_CANCELLED;
+
+        $order->update([
+            'status' => $status,
+        ]);
+
+        $order->table()
+            ->lockForUpdate()
+            ->update([
+                'status' => 'free',
+            ]);
     }
 }

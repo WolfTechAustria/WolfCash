@@ -17,6 +17,7 @@ class OrderItem extends Model
         'paid_at',
         'production_status',
         'production_completed_quantity',
+        'production_printed_quantity',
         'cancelled_quantity',
         'cancelled_at',
         'cancelled_by',
