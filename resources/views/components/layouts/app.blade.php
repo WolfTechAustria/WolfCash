@@ -18,6 +18,7 @@
 
     $adminLinks = [
         ['route' => 'admin.dashboard', 'label' => 'Übersicht'],
+        ['route' => 'admin.orders', 'label' => 'Bestellungen'],
         ['route' => 'admin.devices', 'label' => 'Geräte'],
         ['route' => 'admin.tables', 'label' => 'Tische'],
         ['route' => 'admin.products', 'label' => 'Produkte'],
@@ -60,7 +61,7 @@
                 WolfCash
             </a>
 
-            <nav class=" items-center gap-1 lg:flex">
+            <nav class="hidden items-center gap-1 lg:flex">
                 @foreach($adminLinks as $link)
                     <a
                         href="{{ route($link['route']) }}"

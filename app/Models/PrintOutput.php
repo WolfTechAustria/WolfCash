@@ -14,6 +14,8 @@ class PrintOutput extends Model
 
     public const TYPE_PRODUCTION = 'production';
 
+    public const TYPE_CANCELLATION = 'cancellation';
+
     protected $fillable = [
         'print_job_id',
         'order_item_id',

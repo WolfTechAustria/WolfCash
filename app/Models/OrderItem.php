@@ -75,4 +75,11 @@ class OrderItem extends Model
     {
         return $this->cancelled_quantity >= $this->quantity;
     }
+
+    public function cancellations()
+    {
+        return $this->hasMany(
+            OrderItemCancellation::class
+        );
+    }
 }

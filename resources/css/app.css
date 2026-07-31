@@ -1,6 +1,10 @@
 @import 'tailwindcss';
 @import url('https://fonts.bunny.net/css?family=inter:400,500,600,700|space-grotesk:500,600,700');
 
+@source '../views/**/*.blade.php';
+@source '../js/**/*.js';
+@source '../../app/**/*.php';
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 

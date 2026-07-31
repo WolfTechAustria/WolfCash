@@ -180,7 +180,8 @@
         {{-- ===================== BESTELLANSICHT ===================== --}}
 
         <div
-            x-data="{ cartOpen: $wire.entangle('cartOpen').live }"
+            wire:key="pos-order-wrapper-{{ $selectedTable }}"
+            x-data="{ cartOpen: false }"
             class="flex min-h-[calc(100dvh-49px)] flex-col lg:flex-row"
         >
 

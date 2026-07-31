@@ -12,6 +12,8 @@ use App\Livewire\Admin\ProductionStations\Index as ProductionStationsIndex;
 use App\Livewire\Admin\PrintJobs\Index as PrintJobsIndex;
 use App\Livewire\Production\Index as ProductionIndex;
 use App\Livewire\Pos\Checkout;
+use App\Livewire\Admin\Orders\Index as OrdersIndex;
+use App\Livewire\Admin\Orders\Show as OrderShow;
 
 /*
 |--------------------------------------------------------------------------
@@ -77,6 +79,18 @@ Route::middleware('auth')->group(function () {
             ->name('admin.product-groups');
         Route::get('/product-categories', ProductCategoriesIndex::class)
             ->name('admin.product-categories');
+
+
+        //Bestellübersicht
+        Route::get('/orders', OrdersIndex::class)
+            ->name('admin.orders');
+
+        Route::get('/orders', OrdersIndex::class)
+            ->name('admin.orders');
+
+        Route::get('/orders/{order}', OrderShow::class)
+            ->name('admin.orders.show');
+
 
         //Druckermanagement
         Route::get('/printers', PrintersIndex::class)
