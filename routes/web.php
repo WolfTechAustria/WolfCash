@@ -14,6 +14,7 @@ use App\Livewire\Production\Index as ProductionIndex;
 use App\Livewire\Pos\Checkout;
 use App\Livewire\Admin\Orders\Index as OrdersIndex;
 use App\Livewire\Admin\Orders\Show as OrderShow;
+use App\Livewire\Admin\Cancellations\Index as CancellationsIndex;
 
 /*
 |--------------------------------------------------------------------------
@@ -90,6 +91,10 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/orders/{order}', OrderShow::class)
             ->name('admin.orders.show');
+
+        //Stornierungen
+        Route::get('/cancellations', CancellationsIndex::class)
+            ->name('admin.cancellations');
 
 
         //Druckermanagement

@@ -19,6 +19,7 @@
     $adminLinks = [
         ['route' => 'admin.dashboard', 'label' => 'Übersicht'],
         ['route' => 'admin.orders', 'label' => 'Bestellungen'],
+        ['route' => 'admin.cancellations', 'label' => 'Stornos'],
         ['route' => 'admin.devices', 'label' => 'Geräte'],
         ['route' => 'admin.tables', 'label' => 'Tische'],
         ['route' => 'admin.products', 'label' => 'Produkte'],
