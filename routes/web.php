@@ -15,6 +15,10 @@ use App\Livewire\Pos\Checkout;
 use App\Livewire\Admin\Orders\Index as OrdersIndex;
 use App\Livewire\Admin\Orders\Show as OrderShow;
 use App\Livewire\Admin\Cancellations\Index as CancellationsIndex;
+use App\Livewire\Admin\DailySummary\Index as DailySummaryIndex;
+use App\Livewire\Admin\DailyClosings\Index as DailyClosingsIndex;
+use App\Livewire\Admin\DailyClosings\Show as DailyClosingShow;
+use App\Livewire\Admin\ProductReports\Index as ProductReportsIndex;
 
 /*
 |--------------------------------------------------------------------------
@@ -95,6 +99,27 @@ Route::middleware('auth')->group(function () {
         //Stornierungen
         Route::get('/cancellations', CancellationsIndex::class)
             ->name('admin.cancellations');
+
+
+        //Tagesabrechnung
+        Route::get('/daily-summary', DailySummaryIndex::class)
+            ->name('admin.daily-summary');
+
+        Route::get(
+            '/daily-closings',
+            DailyClosingsIndex::class
+        )->name('admin.daily-closings');
+
+        Route::get(
+            '/daily-closings/{dailyClosing}',
+            DailyClosingShow::class
+        )->name('admin.daily-closings.show');
+
+        //Verkaufsstatistik
+        Route::get(
+            '/product-reports',
+            ProductReportsIndex::class
+        )->name('admin.product-reports');
 
 
         //Druckermanagement

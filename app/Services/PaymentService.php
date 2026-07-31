@@ -9,11 +9,13 @@ use Illuminate\Support\Facades\DB;
 
 class PaymentService
 {
-    public function paySelection(
-        Order $order,
-        array $selectedForPayment,
-        string $method
-    ): void {
+
+    public function __construct(private readonly DailyClosingService $dailyClosingService) {
+    }
+    public function paySelection(Order $order, array $selectedForPayment, string $method): void
+    {
+        $this->dailyClosingService->assertOpen(today());
+
         DB::transaction(function () use (
             $order,
             $selectedForPayment,
@@ -124,10 +126,10 @@ class PaymentService
         });
     }
 
-    public function payRemaining(
-        Order $order,
-        string $method
-    ): void {
+    public function payRemaining(Order $order, string $method): void
+    {
+        $this->dailyClosingService->assertOpen(today());
+
         DB::transaction(function () use (
             $order,
             $method

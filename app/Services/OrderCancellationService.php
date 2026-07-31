@@ -13,12 +13,14 @@ use App\Models\PrintOutput;
 
 class OrderCancellationService
 {
-    public function cancel(
-        OrderItem $item,
-        int $quantity,
-        string $reason,
-        ?int $userId = null
-    ): OrderItem {
+
+    public function __construct(private readonly DailyClosingService $dailyClosingService) {
+    }
+
+    public function cancel(OrderItem $item, int $quantity, string $reason, ?int $userId = null): OrderItem
+    {
+        $this->dailyClosingService->assertOpen(today());
+
         if ($quantity <= 0) {
             throw new InvalidArgumentException(
                 'Die Stornomenge muss größer als 0 sein.'

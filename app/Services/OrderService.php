@@ -10,8 +10,13 @@ use App\Jobs\ProcessPrintJob;
 
 class OrderService
 {
+    public function __construct(private readonly DailyClosingService $dailyClosingService) {
+
+    }
     public function createOrder(int $tableId, array $cart, ?PrintService $printService = null):Order
     {
+        $this->dailyClosingService->assertOpen(today());
+
         return DB::transaction(function () use ($tableId, $cart, $printService)
         {
             $table = Table::findOrFail($tableId);
