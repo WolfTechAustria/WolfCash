@@ -6,6 +6,8 @@
     <meta name="theme-color" content="#17140f">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+
     <title>WolfCash</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
