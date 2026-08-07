@@ -7,9 +7,8 @@ use RuntimeException;
 
 class PrintOutputRenderer
 {
-    public function render(
-        PrintOutput $output
-    ): RenderedPrint {
+    public function render(PrintOutput $output): RenderedPrint
+    {
         $output->loadMissing([
             'printJob.order.table',
             'printJob.productionStation',
@@ -26,14 +25,16 @@ class PrintOutputRenderer
             PrintOutput::TYPE_CANCELLATION =>
             $this->renderCancellation($output),
 
+            PrintOutput::TYPE_RECEIPT =>
+            $this->renderReceipt($output),
+
             default =>
             $this->renderProduction($output),
         };
     }
 
-    private function renderProduction(
-        PrintOutput $output
-    ): RenderedPrint {
+    private function renderProduction(PrintOutput $output): RenderedPrint
+    {
         $payload = $output->payload ?? [];
 
         $tableNumber =
@@ -88,9 +89,8 @@ class PrintOutputRenderer
         );
     }
 
-    private function renderCancellation(
-        PrintOutput $output
-    ): RenderedPrint {
+    private function renderCancellation(PrintOutput $output): RenderedPrint
+    {
         $payload = $output->payload ?? [];
 
         $tableNumber =
@@ -161,4 +161,148 @@ class PrintOutputRenderer
             cutPaper: true,
         );
     }
+
+    private function renderReceipt(PrintOutput $output): RenderedPrint
+    {
+        $payload = $output->payload ?? [];
+
+        $items = $payload['items'] ?? [];
+
+        $receiptNumber =
+            $payload['receipt_number']
+            ?? $payload['payment_id']
+            ?? $output->id;
+
+        $orderId =
+            $payload['order_id']
+            ?? $output->printJob?->order_id
+            ?? '–';
+
+        $tableNumber =
+            $payload['table_number']
+            ?? $output->printJob?->order?->table?->number
+            ?? '–';
+
+        $paymentMethod = match (
+            $payload['payment_method'] ?? ''
+        ) {
+            'cash' => 'Bar',
+            'card' => 'Karte',
+            'voucher' => 'Gutschein',
+            'invoice' => 'Rechnung',
+            'house' => 'Auf Haus',
+            default => ucfirst(
+                (string) (
+                    $payload['payment_method']
+                    ?? 'Unbekannt'
+                )
+            ),
+        };
+
+        $paidAt = isset($payload['paid_at'])
+            ? \Carbon\Carbon::parse(
+                $payload['paid_at']
+            )->format('d.m.Y H:i')
+            : $output->created_at->format('d.m.Y H:i');
+
+        $amount = (float) (
+            $payload['amount'] ?? 0
+        );
+
+        $lines = [
+            'WOLFCASH',
+            '',
+            'ZAHLUNGSBELEG',
+            str_repeat('=', 32),
+
+            'Beleg: #'.$receiptNumber,
+            'Bestellung: #'.$orderId,
+            'Tisch: '.$tableNumber,
+            'Datum: '.$paidAt,
+
+            str_repeat('-', 32),
+        ];
+
+        foreach ($items as $item) {
+            $quantity = max(
+                1,
+                (int) ($item['quantity'] ?? 1)
+            );
+
+            $name = trim(
+                (string) (
+                    $item['name']
+                    ?? 'Unbekanntes Produkt'
+                )
+            );
+
+            $unitPrice = (float) (
+                $item['unit_price'] ?? 0
+            );
+
+            $lineTotal = (float) (
+                $item['total']
+                ?? ($unitPrice * $quantity)
+            );
+
+            $lines[] = $quantity.'x '.$name;
+
+            $lines[] = sprintf(
+                '  %s x %s EUR',
+                number_format(
+                    $quantity,
+                    0,
+                    ',',
+                    '.'
+                ),
+                number_format(
+                    $unitPrice,
+                    2,
+                    ',',
+                    '.'
+                )
+            );
+
+            $lines[] = sprintf(
+                '  Summe: %s EUR',
+                number_format(
+                    $lineTotal,
+                    2,
+                    ',',
+                    '.'
+                )
+            );
+
+            if (! empty($item['note'])) {
+                $lines[] = '  > '.$item['note'];
+            }
+        }
+
+        $lines[] = str_repeat('=', 32);
+
+        $lines[] = sprintf(
+            'GESAMT: %s EUR',
+            number_format(
+                $amount,
+                2,
+                ',',
+                '.'
+            )
+        );
+
+        $lines[] = 'Zahlungsart: '.$paymentMethod;
+
+        $lines[] = str_repeat('=', 32);
+
+        $lines[] = '';
+        $lines[] = 'Vielen Dank!';
+        $lines[] = '';
+
+        return new RenderedPrint(
+            title: 'Zahlungsbeleg',
+            lines: $lines,
+            cutPaper: true,
+        );
+    }
+
 }

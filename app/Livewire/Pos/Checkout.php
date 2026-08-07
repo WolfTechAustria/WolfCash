@@ -157,11 +157,26 @@ class Checkout extends Component
             return;
         }
 
-        $paymentService->paySelection(
+        $payment = $paymentService->paySelection(
             $this->order,
             $this->selectedForPayment,
             $method
         );
+
+        if (! $payment) {
+            $this->addError(
+                'payment',
+                'Die Zahlung konnte nicht erstellt werden.'
+            );
+
+            return;
+        }
+
+        /*
+         * Auch bei einer Teilzahlung merken wir uns sofort
+         * die konkrete Zahlung.
+         */
+        $this->lastPayment = $payment;
 
         $this->selectedForPayment = [];
 
@@ -178,10 +193,21 @@ class Checkout extends Component
             return;
         }
 
-        $paymentService->payRemaining(
+        $payment = $paymentService->payRemaining(
             $this->order,
             $method
         );
+
+        if (! $payment) {
+            $this->addError(
+                'payment',
+                'Es sind keine verrechenbaren Positionen mehr offen.'
+            );
+
+            return;
+        }
+
+        $this->lastPayment = $payment;
 
         $this->selectedForPayment = [];
 
@@ -295,10 +321,6 @@ class Checkout extends Component
             'status' => 'free',
         ]);
 
-        $this->lastPayment = $this->order
-            ->payments()
-            ->latest()
-            ->first();
 
         $this->paymentFinished = true;
     }

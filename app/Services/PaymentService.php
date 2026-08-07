@@ -9,22 +9,36 @@ use Illuminate\Support\Facades\DB;
 
 class PaymentService
 {
-
-    public function __construct(private readonly DailyClosingService $dailyClosingService) {
+    public function __construct(
+        private readonly DailyClosingService $dailyClosingService,
+        private readonly PaymentReceiptService $paymentReceiptService,
+    ) {
     }
-    public function paySelection(Order $order, array $selectedForPayment, string $method): void
-    {
+
+    /**
+     * Bezahlt ausgewählte Mengen und erzeugt dafür genau
+     * einen Zahlungsdatensatz samt Kundenbeleg.
+     *
+     * @param array<int|string, int> $selectedForPayment
+     */
+    public function paySelection(
+        Order $order,
+        array $selectedForPayment,
+        string $method
+    ): ?Payment {
         $this->dailyClosingService->assertOpen(today());
 
-        DB::transaction(function () use (
+        return DB::transaction(function () use (
             $order,
             $selectedForPayment,
             $method
-        ): void {
+        ): ?Payment {
             $amount = 0.0;
+            $receiptItems = [];
 
             foreach ($selectedForPayment as $itemId => $quantity) {
                 $item = OrderItem::query()
+                    ->with('product')
                     ->where('order_id', $order->id)
                     ->whereNull('paid_at')
                     ->lockForUpdate()
@@ -34,7 +48,7 @@ class PaymentService
                     continue;
                 }
 
-                $openQuantity = $item->open_quantity;
+                $openQuantity = (int) $item->open_quantity;
 
                 $payQuantity = min(
                     max(0, (int) $quantity),
@@ -45,15 +59,33 @@ class PaymentService
                     continue;
                 }
 
-                $amount +=
-                    (float) $item->price * $payQuantity;
+                $unitPrice = (float) $item->price;
+                $lineTotal = round(
+                    $unitPrice * $payQuantity,
+                    2
+                );
+
+                $amount += $lineTotal;
 
                 /*
-                 * Alle noch verrechenbaren Stücke dieser Position
-                 * werden bezahlt.
-                 *
-                 * Eine eventuell stornierte Teilmenge bleibt
-                 * historisch am Datensatz erhalten.
+                 * Snapshot für genau diese Zahlung.
+                 * Dieser wird später nicht aus den veränderten
+                 * OrderItems rekonstruiert.
+                 */
+                $receiptItems[] = [
+                    'order_item_id' => $item->id,
+                    'product_id' => $item->product_id,
+                    'name' => $item->product?->name
+                        ?? 'Unbekanntes Produkt',
+                    'quantity' => $payQuantity,
+                    'unit_price' => round($unitPrice, 2),
+                    'total' => $lineTotal,
+                    'note' => $item->note,
+                ];
+
+                /*
+                 * Die gesamte noch offene Menge dieser Position
+                 * wird bezahlt.
                  */
                 if ($payQuantity >= $openQuantity) {
                     $item->update([
@@ -65,8 +97,8 @@ class PaymentService
 
                 /*
                  * Teilzahlung:
-                 * bezahlte Menge wird als eigener Datensatz
-                 * abgespalten.
+                 * Die bezahlte Menge wird als eigener, bereits
+                 * bezahlter Datensatz abgespalten.
                  */
                 OrderItem::create([
                     'order_id' => $item->order_id,
@@ -76,94 +108,129 @@ class PaymentService
                     'note' => $item->note,
                     'status' => $item->status,
                     'paid_at' => now(),
-
-                    /*
-                     * Der abgespaltene Datensatz repräsentiert
-                     * ausschließlich tatsächlich bezahlte Stücke.
-                     */
                     'cancelled_quantity' => 0,
 
                     /*
-                     * Diese Position darf keinen neuen Küchenprozess
-                     * auslösen. Sie ist nur eine Zahlungsaufteilung.
+                     * Diese Position bildet nur die Zahlungsaufteilung
+                     * ab und darf keinen neuen Produktionsbon auslösen.
                      */
                     'production_status' =>
                         $item->production_status,
 
-                    'production_completed_quantity' =>
-                        min(
-                            $payQuantity,
-                            $item->production_completed_quantity
-                        ),
+                    'production_completed_quantity' => min(
+                        $payQuantity,
+                        (int) $item->production_completed_quantity
+                    ),
 
-                    'production_printed_quantity' =>
-                        min(
-                            $payQuantity,
-                            $item->production_printed_quantity
-                        ),
+                    'production_printed_quantity' => min(
+                        $payQuantity,
+                        (int) $item->production_printed_quantity
+                    ),
                 ]);
 
                 /*
-                 * Die stornierte Menge bleibt auf dem ursprünglichen
-                 * Datensatz. Nur die bezahlte aktive Menge wird
-                 * von quantity abgezogen.
+                 * Stornierte Mengen verbleiben am ursprünglichen
+                 * Datensatz. Abgezogen wird nur die bezahlte Menge.
                  */
                 $item->update([
                     'quantity' =>
-                        $item->quantity - $payQuantity,
+                        (int) $item->quantity - $payQuantity,
                 ]);
             }
 
-            if ($amount <= 0) {
-                return;
+            if ($amount <= 0 || $receiptItems === []) {
+                return null;
             }
 
-            Payment::create([
+            $payment = Payment::create([
                 'order_id' => $order->id,
                 'amount' => round($amount, 2),
                 'payment_method' => $method,
+                'user_id' => auth()->id(),
             ]);
+
+            $this->paymentReceiptService->createAndDispatch(
+                payment: $payment,
+                order: $order,
+                items: $receiptItems,
+            );
+
+            return $payment;
         });
     }
 
-    public function payRemaining(Order $order, string $method): void
-    {
+    /**
+     * Bezahlt sämtliche noch offenen Positionen und erstellt
+     * einen Beleg mit genau diesen Positionen.
+     */
+    public function payRemaining(
+        Order $order,
+        string $method
+    ): ?Payment {
         $this->dailyClosingService->assertOpen(today());
 
-        DB::transaction(function () use (
+        return DB::transaction(function () use (
             $order,
             $method
-        ): void {
+        ): ?Payment {
             $openItems = $order->items()
+                ->with('product')
                 ->whereNull('paid_at')
                 ->lockForUpdate()
                 ->get()
                 ->filter(
-                    fn (OrderItem $item) =>
-                        $item->open_quantity > 0
+                    fn (OrderItem $item): bool =>
+                        (int) $item->open_quantity > 0
                 );
 
-            $amount = $openItems->sum(
-                fn (OrderItem $item) =>
-                    (float) $item->price
-                    * $item->open_quantity
-            );
-
-            if ($amount <= 0) {
-                return;
-            }
+            $receiptItems = [];
+            $amount = 0.0;
 
             foreach ($openItems as $item) {
+                $payQuantity = (int) $item->open_quantity;
+                $unitPrice = (float) $item->price;
+
+                $lineTotal = round(
+                    $unitPrice * $payQuantity,
+                    2
+                );
+
+                $amount += $lineTotal;
+
+                $receiptItems[] = [
+                    'order_item_id' => $item->id,
+                    'product_id' => $item->product_id,
+                    'name' => $item->product?->name
+                        ?? 'Unbekanntes Produkt',
+                    'quantity' => $payQuantity,
+                    'unit_price' => round($unitPrice, 2),
+                    'total' => $lineTotal,
+                    'note' => $item->note,
+                ];
+
                 $item->update([
                     'paid_at' => now(),
                 ]);
             }
 
-            Payment::create([
+            if ($amount <= 0 || $receiptItems === []) {
+                return null;
+            }
+
+            $payment = Payment::create([
                 'order_id' => $order->id,
                 'amount' => round($amount, 2),
                 'payment_method' => $method,
+                'user_id' => auth()->id(),
             ]);
+
+            $this->paymentReceiptService->createAndDispatch(
+                payment: $payment,
+                order: $order,
+                items: $receiptItems,
+            );
+
+            return $payment;
         });
     }
 }

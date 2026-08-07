@@ -49,6 +49,7 @@
         ['route' => 'admin.production-stations', 'label' => 'Arbeitsplätze'],
         ['route' => 'admin.print-jobs', 'label' => 'Druckjobs'],
         ['route' => 'admin.devices', 'label' => 'Geräte'],
+        ['route' => 'admin.settings', 'label' => 'Allgemeine Einstellungen'],
     ];
 
     $settingsActive = collect($settingsLinks)->contains(fn ($link) => request()->routeIs($link['route']));

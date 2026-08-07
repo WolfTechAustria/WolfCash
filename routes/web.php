@@ -19,6 +19,7 @@ use App\Livewire\Admin\DailySummary\Index as DailySummaryIndex;
 use App\Livewire\Admin\DailyClosings\Index as DailyClosingsIndex;
 use App\Livewire\Admin\DailyClosings\Show as DailyClosingShow;
 use App\Livewire\Admin\ProductReports\Index as ProductReportsIndex;
+use App\Livewire\Admin\Settings\Index as SettingsIndex;
 
 /*
 |--------------------------------------------------------------------------
@@ -67,72 +68,77 @@ Route::middleware('auth')->group(function () {
 
         Route::view('/', 'admin.dashboard')->name('admin.dashboard');
 
-        // Device Management (Livewire)
-        Route::get('/devices', DevicesIndex::class)
-            ->name('admin.devices');
+            // Device Management (Livewire)
+            Route::get('/devices', DevicesIndex::class)
+                ->name('admin.devices');
 
-        //Tables Management
-        Route::get('/tables', TablesIndex::class)
-            ->name('admin.tables');
+            //Tables Management
+            Route::get('/tables', TablesIndex::class)
+                ->name('admin.tables');
 
-        //Product Management
-        Route::get('/products', ProductsIndex::class)
-            ->name('admin.products');
+            //Product Management
+            Route::get('/products', ProductsIndex::class)
+                ->name('admin.products');
 
-        //Produktgruppen und Kategorien
-        Route::get('/product-groups',ProductGroupsIndex::class)
-            ->name('admin.product-groups');
-        Route::get('/product-categories', ProductCategoriesIndex::class)
-            ->name('admin.product-categories');
-
-
-        //Bestellübersicht
-        Route::get('/orders', OrdersIndex::class)
-            ->name('admin.orders');
-
-        Route::get('/orders', OrdersIndex::class)
-            ->name('admin.orders');
-
-        Route::get('/orders/{order}', OrderShow::class)
-            ->name('admin.orders.show');
-
-        //Stornierungen
-        Route::get('/cancellations', CancellationsIndex::class)
-            ->name('admin.cancellations');
+            //Produktgruppen und Kategorien
+            Route::get('/product-groups',ProductGroupsIndex::class)
+                ->name('admin.product-groups');
+            Route::get('/product-categories', ProductCategoriesIndex::class)
+                ->name('admin.product-categories');
 
 
-        //Tagesabrechnung
-        Route::get('/daily-summary', DailySummaryIndex::class)
-            ->name('admin.daily-summary');
+            //Bestellübersicht
+            Route::get('/orders', OrdersIndex::class)
+                ->name('admin.orders');
 
-        Route::get(
-            '/daily-closings',
-            DailyClosingsIndex::class
-        )->name('admin.daily-closings');
+            Route::get('/orders', OrdersIndex::class)
+                ->name('admin.orders');
 
-        Route::get(
-            '/daily-closings/{dailyClosing}',
-            DailyClosingShow::class
-        )->name('admin.daily-closings.show');
+            Route::get('/orders/{order}', OrderShow::class)
+                ->name('admin.orders.show');
 
-        //Verkaufsstatistik
-        Route::get(
-            '/product-reports',
-            ProductReportsIndex::class
-        )->name('admin.product-reports');
+            //Stornierungen
+            Route::get('/cancellations', CancellationsIndex::class)
+                ->name('admin.cancellations');
 
 
-        //Druckermanagement
-        Route::get('/printers', PrintersIndex::class)
-            ->name('admin.printers');
+            //Tagesabrechnung
+            Route::get('/daily-summary', DailySummaryIndex::class)
+                ->name('admin.daily-summary');
 
-        //Arbeitsplätze
-        Route::get('/production-stations', ProductionStationsIndex::class)
-            ->name('admin.production-stations');
+            Route::get(
+                '/daily-closings',
+                DailyClosingsIndex::class
+            )->name('admin.daily-closings');
 
-        //Druckjobs
-        Route::get('/print-jobs', PrintJobsIndex::class)
-            ->name('admin.print-jobs');
+            Route::get(
+                '/daily-closings/{dailyClosing}',
+                DailyClosingShow::class
+            )->name('admin.daily-closings.show');
+
+            //Verkaufsstatistik
+            Route::get(
+                '/product-reports',
+                ProductReportsIndex::class
+            )->name('admin.product-reports');
+
+
+            //Druckermanagement
+            Route::get('/printers', PrintersIndex::class)
+                ->name('admin.printers');
+
+            //Arbeitsplätze
+            Route::get('/production-stations', ProductionStationsIndex::class)
+                ->name('admin.production-stations');
+
+            //Druckjobs
+            Route::get('/print-jobs', PrintJobsIndex::class)
+                ->name('admin.print-jobs');
+
+            //Einstellungen
+            Route::get('/settings',SettingsIndex::class)
+                ->name('admin.settings');
+
 
     });
 });

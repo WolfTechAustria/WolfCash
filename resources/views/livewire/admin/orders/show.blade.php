@@ -390,42 +390,190 @@
         {{-- Zahlungen --}}
         <section>
 
-            <h2 class="mb-2 font-display text-lg font-semibold">
-                Zahlungen
-            </h2>
+            <div class="mb-2 flex items-center justify-between gap-3">
+
+                <h2 class="font-display text-lg font-semibold">
+                    Zahlungen
+                </h2>
+
+
+
+                <span class="text-sm text-dim">
+            {{ $order->payments->count() }}
+        </span>
+
+            </div>
+
+            @if(! $receiptReprintingEnabled)
+                <p class="mt-2 text-xs text-occupied">
+                    Der manuelle Zahlungsbelegdruck ist global deaktiviert.
+                </p>
+            @endif
+
+            @if(session('receiptReprintSuccess'))
+                <div class="mb-3 rounded-xl border border-free/40 bg-free-soft px-4 py-3 text-sm text-free">
+                    {{ session('receiptReprintSuccess') }}
+                </div>
+            @endif
+
+            @error('receiptReprint')
+            <div class="mb-3 rounded-xl border border-occupied/40 bg-occupied-soft px-4 py-3 text-sm text-occupied">
+                {{ $message }}
+            </div>
+            @enderror
 
             <div class="overflow-hidden rounded-2xl border border-line bg-surface">
 
                 @forelse($order->payments->sortByDesc('created_at') as $payment)
 
+                    @php
+                        $receiptJob = $payment->receiptPrintJob;
+
+                        $originalOutput = $receiptJob
+                            ?->outputs
+                            ?->sortBy('created_at')
+                            ?->first();
+
+                        $reprintCount = $receiptJob
+                            ?->outputs
+                            ?->filter(
+                                fn ($output) =>
+                                    (bool) data_get(
+                                        $output->payload,
+                                        'reprint',
+                                        false
+                                    )
+                            )
+                            ?->count() ?? 0;
+
+                        $receiptStatus = match (true) {
+    ! $receiptJob => [
+        'text-occupied',
+        'Kein Beleg-Snapshot',
+    ],
+
+    ! $originalOutput => [
+        'text-dim',
+        'Noch nicht gedruckt',
+    ],
+
+    $originalOutput->status === 'printed' => [
+        'text-free',
+        'Gedruckt',
+    ],
+
+    $originalOutput->status === 'failed' => [
+        'text-occupied',
+        'Fehlgeschlagen',
+    ],
+
+    $originalOutput->status === 'printing' => [
+        'text-accent',
+        'Wird gedruckt',
+    ],
+
+    default => [
+        'text-dim',
+        'Ausstehend',
+    ],
+};
+                    @endphp
+
                     <div
                         wire:key="payment-{{ $payment->id }}"
-                        class="flex items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-b-0"
+                        class="border-b border-line px-4 py-3 last:border-b-0"
                     >
-                        <div>
 
-                            <p class="font-medium">
-                                {{ match($payment->payment_method) {
-                                    'cash' => 'Barzahlung',
-                                    'card' => 'Kartenzahlung',
-                                    default => $payment->payment_method,
-                                } }}
-                            </p>
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 
-                            <p class="text-xs text-dim">
-                                {{ $payment->created_at->format('d.m.Y H:i') }}
-                            </p>
+                            <div>
+
+                                <div class="flex flex-wrap items-center gap-2">
+
+                                    <p class="font-medium">
+                                        {{ match($payment->payment_method) {
+                                            'cash' => 'Barzahlung',
+                                            'card' => 'Kartenzahlung',
+                                            'voucher' => 'Gutschein',
+                                            'invoice' => 'Rechnung',
+                                            'house' => 'Auf Haus',
+                                            default => $payment->payment_method,
+                                        } }}
+                                    </p>
+
+                                    <span class="text-xs font-medium {{ $receiptStatus[0] }}">
+                                {{ $receiptStatus[1] }}
+                            </span>
+
+                                </div>
+
+                                <p class="mt-0.5 text-xs text-dim">
+                                    Zahlung #{{ $payment->id }}
+                                    ·
+                                    {{ $payment->created_at->format('d.m.Y H:i') }}
+                                </p>
+
+                                @if($receiptJob)
+                                    <p class="mt-0.5 text-xs text-dim">
+                                        Belegjob #{{ $receiptJob->id }}
+
+                                        @if($reprintCount > 0)
+                                            ·
+                                            {{ $reprintCount }}
+                                            {{ $reprintCount === 1
+                                                ? 'Nachdruck'
+                                                : 'Nachdrucke' }}
+                                        @endif
+                                    </p>
+                                @endif
+
+                            </div>
+
+                            <div class="flex items-center justify-between gap-3 sm:justify-end">
+
+                                <p class="font-display text-lg font-semibold tabular-nums text-free">
+                                    {{ number_format(
+                                        $payment->amount,
+                                        2,
+                                        ',',
+                                        '.'
+                                    ) }} €
+                                </p>
+
+                                <button
+                                    type="button"
+                                    wire:click="reprintReceipt({{ $payment->id }})"
+                                    wire:confirm="Zahlungsbeleg #{{ $payment->id }} wirklich erneut drucken?"
+                                    wire:loading.attr="disabled"
+                                    wire:target="reprintReceipt({{ $payment->id }})"
+                                    @disabled(! $receiptJob || ! $receiptReprintingEnabled)
+                                    class="inline-flex min-w-28 items-center justify-center rounded-lg border border-line px-3 py-2 text-xs font-medium text-dim transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                            <span
+                                wire:loading.remove
+                                wire:target="reprintReceipt({{ $payment->id }})"
+                            >
+                                Beleg drucken
+                            </span>
+
+                                    <span
+                                        wire:loading
+                                        wire:target="reprintReceipt({{ $payment->id }})"
+                                    >
+                                Wird gesendet …
+                            </span>
+                                </button>
+
+                            </div>
 
                         </div>
 
-                        <p class="font-display text-lg font-semibold tabular-nums text-free">
-                            {{ number_format(
-                                $payment->amount,
-                                2,
-                                ',',
-                                '.'
-                            ) }} €
-                        </p>
+                        @if(! $receiptJob)
+                            <p class="mt-2 rounded-lg bg-occupied-soft px-2.5 py-2 text-xs text-occupied">
+                                Für diese ältere Zahlung ist kein gespeicherter
+                                Beleg-Snapshot vorhanden.
+                            </p>
+                        @endif
 
                     </div>
 
@@ -435,9 +583,13 @@
                         Keine Zahlungen vorhanden.
                     </p>
 
+
                 @endforelse
 
+
             </div>
+
+
 
         </section>
 
@@ -582,24 +734,49 @@
                         </td>
 
                         <td class="px-4 py-3">
-                            @if($output->type === 'cancellation')
-                                <span class="rounded-full bg-occupied/15 px-2 py-1 text-xs font-medium text-occupied">
+                            @switch($output->type)
+
+                                @case('receipt')
+                                    <span class="rounded-full bg-free/15 px-2 py-1 text-xs font-medium text-free">
+                                        {{ data_get(
+                                            $output->payload,
+                                            'reprint',
+                                            false
+                                        )
+                                            ? 'Belegkopie'
+                                            : 'Zahlungsbeleg' }}
+                                    </span>
+                                                                @break
+
+                                                            @case('cancellation')
+                                                                <span class="rounded-full bg-occupied/15 px-2 py-1 text-xs font-medium text-occupied">
                                         Storno
                                     </span>
-                            @else
-                                <span class="rounded-full bg-accent/15 px-2 py-1 text-xs font-medium text-accent">
+                                                                @break
+
+                                                            @default
+                                                                <span class="rounded-full bg-accent/15 px-2 py-1 text-xs font-medium text-accent">
                                         Produktion
                                     </span>
-                            @endif
+
+                            @endswitch
                         </td>
 
                         <td class="px-4 py-3">
-                            {{ $output->orderItem?->product?->name
-                                ?? data_get(
+                            @if($output->type === 'receipt')
+                                Zahlung #{{ data_get(
                                     $output->payload,
-                                    'name',
+                                    'payment_id',
                                     '–'
                                 ) }}
+                            @else
+                                {{ $output->orderItem?->product?->name
+                                    ?? data_get(
+                                        $output->payload,
+                                        'name',
+                                        '–'
+                                    ) }}
+                            @endif
                         </td>
 
                         <td class="px-4 py-3 text-right tabular-nums">

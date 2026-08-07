@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-
-
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Payment extends Model
 {
@@ -20,20 +20,21 @@ class Payment extends Model
     public const HOUSE = 'house';
 
     protected $fillable = [
-
         'order_id',
-
         'amount',
-
         'payment_method',
-
         'device_id',
-
         'user_id',
-
     ];
 
-    public function order()
+    protected function casts(): array
+    {
+        return [
+            'amount' => 'decimal:2',
+        ];
+    }
+
+    public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
     }
@@ -45,5 +46,13 @@ class Payment extends Model
         );
     }
 
-
+    public function receiptPrintJob(): HasOne
+    {
+        return $this->hasOne(
+            PrintJob::class
+        )->where(
+            'type',
+            PrintJob::TYPE_RECEIPT
+        );
+    }
 }

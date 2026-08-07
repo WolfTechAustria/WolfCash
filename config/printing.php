@@ -16,6 +16,22 @@ return [
 
     'driver' => env('PRINT_DRIVER', 'simulation'),
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Drucker für Kundenbelege
+    |--------------------------------------------------------------------------
+    |
+    | ID des Druckers aus der Tabelle printers.
+    |
+    */
+
+    'receipt_printer_id' => env(
+        'PRINT_RECEIPT_PRINTER_ID',
+        0
+    ),
+
+
     /*
     |--------------------------------------------------------------------------
     | Netzwerk-Timeout
@@ -26,4 +42,6 @@ return [
         'PRINT_NETWORK_TIMEOUT',
         5
     ),
+
+
 ];
