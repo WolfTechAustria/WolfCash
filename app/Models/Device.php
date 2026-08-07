@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\DeviceStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Enums\DeviceStatus;
+use Illuminate\Support\Str;
 
 class Device extends Model
 {
@@ -18,14 +19,19 @@ class Device extends Model
         'approved_at',
         'approved_by',
         'status',
+        'api_token',
     ];
 
     protected $casts = [
         'last_seen_at' => 'datetime',
         'approved_at' => 'datetime',
         'status' => DeviceStatus::class,
-    ];
 
+        /*
+         * Laravel verschlüsselt den Token in der Datenbank.
+         */
+        'api_token' => 'encrypted',
+    ];
 
     protected static function booted(): void
     {
@@ -35,6 +41,7 @@ class Device extends Model
             }
         });
     }
+
     public function approver(): BelongsTo
     {
         return $this->belongsTo(

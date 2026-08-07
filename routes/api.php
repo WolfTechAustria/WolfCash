@@ -1,56 +1,18 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\DeviceController;
 use Illuminate\Support\Facades\Route;
-use App\Models\Device;
-use Illuminate\Support\Str;
 
-/*
-|--------------------------------------------------------------------------
-| Device Register
-|--------------------------------------------------------------------------
-*/
+Route::prefix('device')->group(function (): void {
 
-Route::post('/device/register', function (Request $request) {
-
-    $request->validate([
-        'fingerprint' => 'required|string',
-        'platform' => 'nullable|string',
-    ]);
-
-    $device = Device::firstOrCreate(
-        ['fingerprint' => $request->fingerprint],
-        [
-            'uuid' => (string) Str::uuid(),
-            'name' => $request->name ?? 'Unknown Device',
-            'platform' => $request->platform ?? 'browser',
-            'status' => 'pending',
-        ]
+    Route::post(
+        '/register',
+        [DeviceController::class, 'register']
     );
 
-    return response()->json([
-        'device_id' => $device->id,
-        'status' => $device->status,
-    ]);
+    Route::post(
+        '/status',
+        [DeviceController::class, 'status']
+    );
+
 });
-
-Route::post('/device/status', function (Request $request) {
-
-    $request->validate([
-        'fingerprint' => 'required|string',
-    ]);
-
-    $device = Device::where('fingerprint', $request->fingerprint)->first();
-
-    if (! $device) {
-        return response()->json([
-            'status' => 'unknown'
-        ]);
-    }
-
-    return response()->json([
-        'status' => $device->status,
-        'device_id' => $device->id,
-    ]);
-});
-
