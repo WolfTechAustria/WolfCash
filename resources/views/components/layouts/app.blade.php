@@ -33,14 +33,20 @@
         ['route' => 'admin.print-jobs', 'label' => 'Druckjobs'],
     ];
 
-    $primaryLinks = [
-        ['route' => 'admin.dashboard', 'label' => 'Übersicht'],
-        ['route' => 'admin.tables', 'label' => 'Tische'],
-        ['route' => 'admin.products', 'label' => 'Produkte'],
+    $orderLinks = [
+
         ['route' => 'admin.orders', 'label' => 'Bestellungen'],
         ['route' => 'admin.cancellations', 'label' => 'Stornos'],
         ['route' => 'admin.daily-summary', 'label' => 'Tagesübersicht'],
         ['route' => 'admin.daily-closings', 'label' => 'Tagesabschlüsse'],
+
+    ];
+
+    $primaryLinks = [
+        ['route' => 'admin.dashboard', 'label' => 'Übersicht'],
+        ['route' => 'admin.tables', 'label' => 'Tische'],
+        ['route' => 'admin.products', 'label' => 'Produkte'],
+
         ['route' => 'admin.product-reports', 'label' => 'Produktauswertung'],
     ];
 
@@ -55,6 +61,7 @@
     ];
 
     $settingsActive = collect($settingsLinks)->contains(fn ($link) => request()->routeIs($link['route']));
+    $ordersActive = collect($orderLinks)->contains(fn ($link) => request()->routeIs($link['route']));
 @endphp
 
 @if($isFloor)
@@ -98,6 +105,44 @@
                         {{ $link['label'] }}
                     </a>
                 @endforeach
+
+                    {{-- Bestellungen-Dropdown --}}
+                    <div class="relative" x-data="{ orderOpen: false }" @click.outside="ordersOpen = false" @keydown.escape.window="ordersOpen = false">
+                        <button
+                            type="button"
+                            @click="orderOpen = !orderOpen"
+                            class="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition
+                            {{ $ordersActive ? 'bg-accent text-accent-ink' : 'text-dim hover:bg-surface-2 hover:text-fg' }}"
+                        >
+                            Bestellungen
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 transition-transform" :class="orderOpen ? '-rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="orderOpen"
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 -translate-y-1"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100"
+                            x-transition:leave-end="opacity-0"
+                            x-cloak
+                            class="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-line bg-surface-2 p-1.5 shadow-xl"
+                        >
+                            @foreach($orderLinks as $link)
+                                <a
+                                    href="{{ route($link['route']) }}"
+                                    @click="orderOpen = false"
+                                    class="block rounded-lg px-3 py-2 text-sm font-medium transition
+                                    {{ request()->routeIs($link['route']) ? 'bg-accent text-accent-ink' : 'text-dim hover:bg-surface hover:text-fg' }}"
+                                >
+                                    {{ $link['label'] }}
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
 
                 {{-- Einstellungen-Dropdown --}}
                 <div class="relative" x-data="{ settingsOpen: false }" @click.outside="settingsOpen = false" @keydown.escape.window="settingsOpen = false">
@@ -228,6 +273,9 @@
 
             const data = await res.json();
 
+            /*
+            //DeviceToken Check
+
             if (data.status === 'pending') {
                 document.body.innerHTML = `
                 <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;padding:2rem;text-align:center;background:#17140f;color:#f5f1e8;font-family:Inter,sans-serif;">
@@ -246,6 +294,8 @@
                 </div>
             `;
             }
+
+             */
         }
 
         checkDevice();

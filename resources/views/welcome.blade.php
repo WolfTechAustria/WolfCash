@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#17140f">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+
     <title>WolfCash</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -21,7 +23,14 @@
     href="{{ route('login') }}"
     class="rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-ink transition hover:bg-accent-strong"
 >
-    Zum Login
+    zum Administrationsbereich
+</a>
+
+<a
+    href="{{ route('pos.index') }}"
+    class="rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-accent-ink transition hover:bg-accent-strong"
+>
+    zum Bonieren
 </a>
 
 </body>
