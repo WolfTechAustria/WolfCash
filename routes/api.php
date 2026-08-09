@@ -18,12 +18,11 @@ Route::prefix('device')->group(function (): void {
         [DeviceController::class, 'status']
     );
 
-    Route::middleware('device.auth')
-        ->post(
-            '/mobile/session',
-            [MobileSessionController::class, 'store']
-        );
-
 });
+
+    Route::middleware('device.auth')->post(
+        '/mobile/session',
+        [MobileSessionController::class, 'store']
+    );
 
 
