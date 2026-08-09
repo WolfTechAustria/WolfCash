@@ -13,6 +13,11 @@ class DeviceController extends Controller
     public function register(
         Request $request
     ): JsonResponse {
+
+        \Log::info('Mobile device registration', [
+            'data' => $request->all(),
+        ]);
+
         $validated = $request->validate([
             'uuid' => [
                 'required',

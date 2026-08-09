@@ -20,6 +20,8 @@ use App\Livewire\Admin\DailyClosings\Index as DailyClosingsIndex;
 use App\Livewire\Admin\DailyClosings\Show as DailyClosingShow;
 use App\Livewire\Admin\ProductReports\Index as ProductReportsIndex;
 use App\Livewire\Admin\Settings\Index as SettingsIndex;
+use App\Http\Controllers\MobileWebSessionController;
+use Illuminate\Http\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -47,6 +49,36 @@ Route::get('/pos/checkout/{table}', Checkout::class)
 Route::get('/production', ProductionIndex::class)
     ->name('production.index');
 
+
+/*
+ * App Route
+ */
+Route::get(
+    '/mobile/session/{code}',
+    [MobileWebSessionController::class, 'consume']
+)->name('mobile.session.consume');
+
+Route::get(
+    '/mobile/ready',
+    function (Request $request) {
+        abort_unless(
+            $request->session()
+                ->has('mobile_device_id'),
+            403
+        );
+
+        return response()->view(
+            'mobile.ready',
+            [
+                'deviceId' =>
+                    $request->session()
+                        ->get(
+                            'mobile_device_id'
+                        ),
+            ]
+        );
+    }
+);
 
 /*
 |--------------------------------------------------------------------------

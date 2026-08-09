@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Api\DeviceController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\MobileSessionController;
+
+
 
 Route::prefix('device')->group(function (): void {
 
@@ -15,4 +18,12 @@ Route::prefix('device')->group(function (): void {
         [DeviceController::class, 'status']
     );
 
+    Route::middleware('device.auth')
+        ->post(
+            '/mobile/session',
+            [MobileSessionController::class, 'store']
+        );
+
 });
+
+
