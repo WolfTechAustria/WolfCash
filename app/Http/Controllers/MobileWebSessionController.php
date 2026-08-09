@@ -42,6 +42,6 @@ class MobileWebSessionController extends Controller
         ]);
 
         return response('', 302)
-            ->header('Location', '/mobile/ready');
+            ->header('Location', '/pos');
     }
 }
