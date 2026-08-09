@@ -11,7 +11,8 @@ class MobileWebSessionController extends Controller
     public function consume(
         Request $request,
         string $code
-    ): RedirectResponse {
+    ): \Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Http\Response
+    {
         $sessionCode =
             MobileSessionCode::query()
                 ->with('device')
@@ -40,6 +41,7 @@ class MobileWebSessionController extends Controller
             'used_at' => now(),
         ]);
 
-        return redirect('/mobile/ready');
+        return response('', 302)
+            ->header('Location', '/mobile/ready');
     }
 }
