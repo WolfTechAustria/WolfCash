@@ -39,12 +39,8 @@ class MobileSessionController extends Controller
             ]);
 
         return response()->json([
-            'url' => route(
-                'mobile.session.consume',
-                [
-                    'code' =>
-                        $sessionCode->code,
-                ]
+            'url' => secure_url(
+                '/mobile/session/'.$sessionCode->code
             ),
         ]);
     }
