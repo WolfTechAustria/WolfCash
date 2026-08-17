@@ -116,7 +116,8 @@
                         Eingabe löschen
                     </button>
 
-                    <button type="button"  onclick="window.ReactNativeWebView?.postMessage(JSON.stringify({type: 'PING'}))">
+                    <br><br>
+                    <button type="button"  class="mt-4 w-full rounded-xl border border-line py-2.5 text-sm font-medium text-dim transition hover:border-occupied hover:text-occupied"  onclick="window.ReactNativeWebView?.postMessage(JSON.stringify({type: 'PING'}))">
                         Native testen
                     </button>
 
