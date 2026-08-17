@@ -6,11 +6,15 @@
         </div>
     @endif
 
+
+
+
     @if(! $selectedTable)
 
         {{-- ===================== TISCHAUSWAHL ===================== --}}
 
         <div class="mx-auto max-w-5xl px-4 py-5 sm:px-6">
+
 
             <div class="mb-5 flex items-center justify-between">
 
@@ -110,6 +114,10 @@
                         class="mt-4 w-full rounded-xl border border-line py-2.5 text-sm font-medium text-dim transition hover:border-occupied hover:text-occupied"
                     >
                         Eingabe löschen
+                    </button>
+
+                    <button type="button"  onclick="window.ReactNativeWebView?.postMessage(JSON.stringify({type: 'PING'}))">
+                        Native testen
                     </button>
 
                 </div>
@@ -802,3 +810,25 @@
     @endif
 
 </div>
+
+
+<script>
+    window.addEventListener(
+        'wolfcash-native-message',
+        function (event) {
+            const message =
+                JSON.parse(event.detail);
+
+            console.log(
+                'Native Antwort:',
+                message
+            );
+
+            if (message.type === 'PONG') {
+                alert(
+                    'WolfCash Native Bridge funktioniert!'
+                );
+            }
+        }
+    );
+</script>

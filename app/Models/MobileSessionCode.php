@@ -14,10 +14,13 @@ class MobileSessionCode extends Model
         'used_at',
     ];
 
-    protected $casts = [
-        'expires_at' => 'datetime',
-        'used_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'expires_at' => 'datetime',
+            'used_at' => 'datetime',
+        ];
+    }
 
     public function device(): BelongsTo
     {
@@ -27,6 +30,7 @@ class MobileSessionCode extends Model
     public function isUsable(): bool
     {
         return $this->used_at === null
+            && $this->expires_at !== null
             && $this->expires_at->isFuture();
     }
 }
