@@ -599,7 +599,7 @@
                     </button>
 
                     <a
-                        href="{{ route('pos.checkout', $selectedTable) }}"
+                        href="{{ route('pos.checkout', $selectedTable, false) }}"
                         class="block w-full rounded-xl border border-line py-3 text-center text-sm font-medium text-dim transition hover:border-accent hover:text-accent"
                     >
                         Abrechnen

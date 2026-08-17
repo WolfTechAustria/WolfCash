@@ -215,6 +215,25 @@
                 >
                     Rest · Karte
                 </button>
+
+                <button
+                    type="button"
+                    class="rounded-xl border border-line py-3 text-sm font-medium text-fg transition active:scale-[0.98]"
+                    onclick="
+                            window.ReactNativeWebView?.postMessage(
+                                JSON.stringify({
+                                    type: 'PAYMENT_START',
+                                    payload: {
+                                        amount: 24.50,
+                                        currency: 'EUR',
+                                        orderId: 123
+                                    }
+                                })
+                            )
+                        "
+                >
+                    Test Kartenzahlung
+                </button>
             </div>
 
         @endif
