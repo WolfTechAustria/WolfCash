@@ -8,6 +8,7 @@ use App\Models\Table;
 use App\Services\PaymentService;
 use Illuminate\Support\Collection;
 use Livewire\Component;
+use Livewire\Attributes\On;
 
 class Checkout extends Component
 {
@@ -25,6 +26,12 @@ class Checkout extends Component
     public bool $paymentFinished = false;
 
     public ?Payment $lastPayment = null;
+
+    public array $pendingCardSelection = [];
+
+    public ?float $pendingCardAmount = null;
+
+    public ?string $pendingCardMode = null;
 
     public function mount(Table $table): void
     {
@@ -296,6 +303,131 @@ class Checkout extends Component
         }
 
         $this->selectedForPayment = $sanitized;
+    }
+
+    public function startSelectedCardPayment(): void
+    {
+        if (! $this->order) {
+            return;
+        }
+
+        $this->sanitizeSelection();
+
+        if ($this->selectedForPayment === []) {
+            $this->addError(
+                'payment',
+                'Bitte mindestens eine Position auswählen.'
+            );
+
+            return;
+        }
+
+        $amount = $this->selectedTotal;
+
+        if ($amount <= 0) {
+            $this->addError(
+                'payment',
+                'Der Zahlungsbetrag ist ungültig.'
+            );
+
+            return;
+        }
+
+        $this->pendingCardSelection =
+            $this->selectedForPayment;
+
+        $this->pendingCardAmount =
+            $amount;
+
+        $this->pendingCardMode =
+            'selected';
+
+        $this->dispatch(
+            'start-native-card-payment',
+            orderId: $this->order->id,
+            amount: $amount,
+            currency: 'EUR',
+        );
+    }
+    public function startRemainingCardPayment(): void
+    {
+        if (! $this->order) {
+            return;
+        }
+
+        $amount = $this->openAmount;
+
+        if ($amount <= 0) {
+            $this->addError(
+                'payment',
+                'Es sind keine offenen Positionen vorhanden.'
+            );
+
+            return;
+        }
+
+        $this->pendingCardSelection = [];
+
+        $this->pendingCardAmount =
+            $amount;
+
+        $this->pendingCardMode =
+            'remaining';
+
+        $this->dispatch(
+            'start-native-card-payment',
+            orderId: $this->order->id,
+            amount: $amount,
+            currency: 'EUR',
+        );
+    }
+
+    #[On('native-card-payment-result')]
+    public function handleNativeCardPaymentResult(
+        bool $success,
+        int $orderId,
+        ?string $transactionId = null,
+        ?string $error = null,
+    ): void {
+        if (! $this->order) {
+            return;
+        }
+
+        if ($this->order->id !== $orderId) {
+            $this->addError(
+                'payment',
+                'Die Kartenzahlung gehört zu einer anderen Bestellung.'
+            );
+
+            return;
+        }
+
+        if (! $success) {
+            $this->addError(
+                'payment',
+                $error
+                ?? 'Kartenzahlung fehlgeschlagen.'
+            );
+
+            $this->clearPendingCardPayment();
+
+            return;
+        }
+
+        /*
+         * Vorerst bewusst NICHT paySelection()
+         * oder payRemaining() aufrufen.
+         *
+         * Hier kommt danach die echte
+         * Stripe-Verifikation hin.
+         */
+    }
+
+    private function clearPendingCardPayment(): void
+    {
+        $this->pendingCardSelection = [];
+        $this->pendingCardAmount = null;
+        $this->pendingCardMode = null;
     }
 
     private function closeOrderIfFullyPaid(): void

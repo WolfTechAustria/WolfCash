@@ -198,7 +198,7 @@
                     Auswahl · Bar
                 </button>
                 <button
-                    wire:click="paySelected('card')"
+                    wire:click="startSelectedCardPayment"
                     class="rounded-xl bg-accent py-3 text-sm font-semibold text-accent-ink transition active:scale-[0.98]"
                 >
                     Auswahl · Karte
@@ -210,30 +210,12 @@
                     Rest · Bar
                 </button>
                 <button
-                    wire:click="payOpen('card')"
+                    wire:click="startRemainingCardPayment"
                     class="rounded-xl border border-line py-3 text-sm font-medium text-fg transition active:scale-[0.98]"
                 >
                     Rest · Karte
                 </button>
 
-                <button
-                    type="button"
-                    class="rounded-xl border border-line py-3 text-sm font-medium text-fg transition active:scale-[0.98]"
-                    onclick="
-                            window.ReactNativeWebView?.postMessage(
-                                JSON.stringify({
-                                    type: 'PAYMENT_START',
-                                    payload: {
-                                        amount: 24.50,
-                                        currency: 'EUR',
-                                        orderId: 123
-                                    }
-                                })
-                            )
-                        "
-                >
-                    Test Kartenzahlung
-                </button>
             </div>
 
         @endif
@@ -241,3 +223,66 @@
     @endif
 
 </div>
+
+@script
+<script>
+    Livewire.on(
+        'start-native-card-payment',
+        (event) => {
+            if (!window.ReactNativeWebView) {
+                console.error(
+                    'Native Bridge nicht verfügbar.'
+                );
+
+                return;
+            }
+
+            window.ReactNativeWebView.postMessage(
+                JSON.stringify({
+                    type: 'PAYMENT_START',
+
+                    payload: {
+                        orderId: event.orderId,
+                        amount: Number(event.amount),
+                        currency: event.currency,
+                    },
+                })
+            );
+        }
+    );
+
+
+    window.addEventListener(
+        'wolfcash-native-message',
+        function (event) {
+            const message = event.detail;
+
+            if (
+                message.type !==
+                'PAYMENT_RESULT'
+            ) {
+                return;
+            }
+
+            Livewire.dispatch(
+                'native-card-payment-result',
+                {
+                    success:
+                    message.payload.success,
+
+                    orderId:
+                    message.payload.orderId,
+
+                    transactionId:
+                        message.payload.transactionId
+                        ?? null,
+
+                    error:
+                        message.payload.error
+                        ?? null,
+                }
+            );
+        }
+    );
+</script>
+@endscript
