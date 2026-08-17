@@ -43,7 +43,7 @@
 
         <div class="mb-4 flex items-center gap-3">
             <a
-                href="{{ route('pos.index') }}"
+                href="{{ route('pos.index'), false }}"
                 class="flex h-9 w-9 items-center justify-center rounded-full border border-line text-dim transition hover:border-accent hover:text-accent"
                 aria-label="Zurück zur Kasse"
             >
