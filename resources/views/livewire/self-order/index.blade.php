@@ -4,7 +4,30 @@
     }"
     class="mx-auto min-h-[calc(100dvh-57px)] max-w-3xl pb-24"
 >
+    @if($selfOrderId)
+        <div
+            class="mx-4 mb-4 rounded-2xl border border-accent/30 bg-accent/10 p-4"
+        >
+            <div
+                class="font-semibold text-accent"
+            >
+                Bestellung vorbereitet
+            </div>
 
+            <div
+                class="mt-1 text-sm text-dim"
+            >
+                SelfOrder #{{ $selfOrderId }}
+                wurde für die Zahlung vorbereitet.
+            </div>
+
+            <div
+                class="mt-2 text-xs text-dim"
+            >
+                Es wurde noch kein Bon erzeugt.
+            </div>
+        </div>
+    @endif
     {{-- Kopfbereich --}}
     <div class="px-4 pb-4 pt-5">
 
@@ -447,14 +470,38 @@
                     Diesen Button verdrahten wir
                     in Phase C.
                 --}}
+                @error('cart')
+                <div
+                    class="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+                >
+                    {{ $message }}
+                </div>
+                @enderror
+
                 <button
                     type="button"
 
-                    disabled
+                    wire:click="proceedToPayment"
 
-                    class="w-full rounded-xl bg-accent px-4 py-3.5 font-semibold text-accent-ink opacity-60"
+                    wire:loading.attr="disabled"
+
+                    wire:target="proceedToPayment"
+
+                    class="w-full rounded-xl bg-accent px-4 py-3.5 font-semibold text-accent-ink transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
                 >
-                    Weiter zur Zahlung
+    <span
+        wire:loading.remove
+        wire:target="proceedToPayment"
+    >
+        Weiter zur Zahlung
+    </span>
+
+                    <span
+                        wire:loading
+                        wire:target="proceedToPayment"
+                    >
+        Bestellung wird geprüft …
+    </span>
                 </button>
 
                 <p

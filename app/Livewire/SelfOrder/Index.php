@@ -8,6 +8,10 @@ use App\Models\ProductGroup;
 use App\Models\Table;
 use App\Models\TableOrderSession;
 use Livewire\Component;
+use App\Models\SelfOrder;
+use App\Models\SelfOrderItem;
+use Illuminate\Support\Facades\DB;
+
 
 class Index extends Component
 {
@@ -18,6 +22,10 @@ class Index extends Component
     public ?int $activeGroup = null;
 
     public ?int $activeCategory = null;
+
+    public bool $creatingSelfOrder = false;
+
+    public ?int $selfOrderId = null;
 
     /**
      * Produkt-ID => Warenkorbposition
@@ -304,6 +312,232 @@ class Index extends Component
             2
         );
     }
+    public function proceedToPayment(): void
+    {
+        if ($this->creatingSelfOrder) {
+            return;
+        }
+
+        if ($this->cart === []) {
+            $this->addError(
+                'cart',
+                'Der Warenkorb ist leer.'
+            );
+
+            return;
+        }
+
+        if (! $this->tableSession->isUsable()) {
+            $this->addError(
+                'cart',
+                'Diese Tischbestellung ist nicht mehr verfügbar.'
+            );
+
+            return;
+        }
+
+        $this->creatingSelfOrder = true;
+
+        try {
+            $selfOrder = DB::transaction(function (): SelfOrder {
+                /*
+                 * Tischsession innerhalb der Transaktion nochmals prüfen.
+                 */
+                $tableSession = \App\Models\TableOrderSession::query()
+                    ->whereKey($this->tableSession->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if (! $tableSession->isUsable()) {
+                    throw new \RuntimeException(
+                        'Diese Tischbestellung ist nicht mehr verfügbar.'
+                    );
+                }
+
+                $validatedItems = [];
+
+                $total = 0.0;
+
+                foreach ($this->cart as $productId => $cartItem) {
+                    $quantity = max(
+                        0,
+                        (int) ($cartItem['quantity'] ?? 0)
+                    );
+
+                    if ($quantity <= 0) {
+                        continue;
+                    }
+
+                    /*
+                     * Produkt IMMER erneut aus der Datenbank laden.
+                     *
+                     * name/price aus dem Browser-/Livewire-State
+                     * werden nicht vertraut.
+                     */
+                    $product = Product::query()
+                        ->whereKey((int) $productId)
+                        ->where('is_active', true)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $product) {
+                        throw new \RuntimeException(
+                            'Ein Produkt im Warenkorb ist nicht mehr verfügbar.'
+                        );
+                    }
+
+                    if ($product->isSoldOut()) {
+                        throw new \RuntimeException(
+                            $product->name
+                            .' ist inzwischen ausverkauft.'
+                        );
+                    }
+
+                    /*
+                     * Begrenzten Bestand erneut kontrollieren.
+                     */
+                    if (
+                        ! $product->isUnlimited()
+                        && $quantity > (int) $product->available_quantity
+                    ) {
+                        throw new \RuntimeException(
+                            'Von '.$product->name
+                            .' sind nur noch '
+                            .$product->available_quantity
+                            .' Stück verfügbar.'
+                        );
+                    }
+
+                    $unitPrice = round(
+                        (float) $product->price,
+                        2
+                    );
+
+                    $lineTotal = round(
+                        $unitPrice * $quantity,
+                        2
+                    );
+
+                    $note = trim(
+                        mb_substr(
+                            (string) ($cartItem['note'] ?? ''),
+                            0,
+                            500
+                        )
+                    );
+
+                    $validatedItems[] = [
+                        'product_id' => $product->id,
+                        'name' => $product->name,
+                        'quantity' => $quantity,
+                        'unit_price' => $unitPrice,
+                        'note' => $note !== ''
+                            ? $note
+                            : null,
+                    ];
+
+                    $total += $lineTotal;
+                }
+
+                $total = round(
+                    $total,
+                    2
+                );
+
+                if (
+                    $validatedItems === []
+                    || $total <= 0
+                ) {
+                    throw new \RuntimeException(
+                        'Der Warenkorb enthält keine verrechenbaren Positionen.'
+                    );
+                }
+
+                /*
+                 * Ab jetzt ist dies der serverseitige Snapshot,
+                 * der später bezahlt wird.
+                 */
+                $selfOrder = SelfOrder::create([
+                    'table_order_session_id' =>
+                        $tableSession->id,
+
+                    'table_id' =>
+                        $tableSession->table_id,
+
+                    'status' =>
+                        SelfOrder::STATUS_AWAITING_PAYMENT,
+
+                    'amount' =>
+                        $total,
+
+                    'currency' =>
+                        'EUR',
+
+                    /*
+                     * Zahlungsprovider setzen wir
+                     * erst beim Erzeugen des Checkouts.
+                     */
+                    'payment_provider' =>
+                        null,
+
+                    'provider_payment_id' =>
+                        null,
+
+                    /*
+                     * Falls der Zahlungsvorgang nie abgeschlossen
+                     * wird, kann dieser Datensatz später verfallen.
+                     */
+                    'expires_at' =>
+                        now()->addMinutes(15),
+                ]);
+
+                foreach ($validatedItems as $item) {
+                    SelfOrderItem::create([
+                        'self_order_id' =>
+                            $selfOrder->id,
+
+                        'product_id' =>
+                            $item['product_id'],
+
+                        'name' =>
+                            $item['name'],
+
+                        'quantity' =>
+                            $item['quantity'],
+
+                        'unit_price' =>
+                            $item['unit_price'],
+
+                        'note' =>
+                            $item['note'],
+                    ]);
+                }
+
+                return $selfOrder;
+            });
+
+            $this->selfOrderId =
+                $selfOrder->id;
+
+            /*
+             * Warenkorb nicht mehr verändern.
+             * Im nächsten Schritt erfolgt hier
+             * der Redirect zum Zahlungsprozess.
+             */
+            $this->cartOpen = false;
+
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            $this->addError(
+                'cart',
+                $exception->getMessage()
+            );
+        } finally {
+            $this->creatingSelfOrder = false;
+        }
+    }
+
 
     public function render()
     {
