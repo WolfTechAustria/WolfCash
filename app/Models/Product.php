@@ -41,4 +41,11 @@ class Product extends Model
     {
         return $this->available_quantity === 0;
     }
+
+    public function selfOrderItems()
+    {
+        return $this->hasMany(
+            SelfOrderItem::class
+        );
+    }
 }

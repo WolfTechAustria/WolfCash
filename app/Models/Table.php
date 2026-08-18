@@ -22,4 +22,18 @@ class Table extends Model
         return $this->hasOne(Order::class)
             ->where('status', Order::STATUS_OPEN);
     }
+
+    public function tableOrderSessions()
+    {
+        return $this->hasMany(
+            TableOrderSession::class
+        );
+    }
+
+    public function selfOrders()
+    {
+        return $this->hasMany(
+            SelfOrder::class
+        );
+    }
 }

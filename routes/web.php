@@ -21,6 +21,7 @@ use App\Livewire\Admin\DailyClosings\Show as DailyClosingShow;
 use App\Livewire\Admin\ProductReports\Index as ProductReportsIndex;
 use App\Livewire\Admin\Settings\Index as SettingsIndex;
 use App\Http\Controllers\MobileWebSessionController;
+use App\Livewire\SelfOrder\Index as SelfOrderIndex;
 use Illuminate\Http\Request;
 
 /*
@@ -30,6 +31,8 @@ use Illuminate\Http\Request;
 */
 
 Route::view('/', 'welcome');
+
+Route::get('/o/{token}',SelfOrderIndex::class)->name('self-order.index');
 
 /*
 |--------------------------------------------------------------------------
