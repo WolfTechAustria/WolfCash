@@ -43,7 +43,8 @@ class Index extends Component
 
         abort_unless(
             $session !== null,
-            404
+            404,
+            'Self-Order-Token wurde nicht gefunden.'
         );
 
         abort_unless(
