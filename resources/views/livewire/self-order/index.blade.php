@@ -218,11 +218,6 @@
                             ) }} €
                         </span>
 
-                        <span
-                            class="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-lg font-semibold text-accent-ink"
-                        >
-                            +
-                        </span>
                     </div>
 
                 </button>
