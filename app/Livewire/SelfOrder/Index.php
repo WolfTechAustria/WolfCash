@@ -520,11 +520,16 @@ class Index extends Component
                 $selfOrder->id;
 
             /*
-             * Warenkorb nicht mehr verändern.
-             * Im nächsten Schritt erfolgt hier
-             * der Redirect zum Zahlungsprozess.
+             * Der Warenkorb wurde jetzt vollständig und
+             * serverseitig als SelfOrder eingefroren.
+             *
+             * Der lokale Warenkorb darf daher geleert werden.
              */
+            $this->cart = [];
+
             $this->cartOpen = false;
+
+            $this->resetErrorBag('cart');
 
         } catch (\Throwable $exception) {
             report($exception);
