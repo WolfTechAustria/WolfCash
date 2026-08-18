@@ -13,6 +13,11 @@
         content="#17140f"
     >
 
+    <meta
+        http-equiv="Content-Security-Policy"
+        content="upgrade-insecure-requests"
+    >
+
     <title>WolfCash Bestellung</title>
 
     @vite([
