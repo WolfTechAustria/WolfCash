@@ -22,6 +22,7 @@ use App\Livewire\Admin\ProductReports\Index as ProductReportsIndex;
 use App\Livewire\Admin\Settings\Index as SettingsIndex;
 use App\Http\Controllers\MobileWebSessionController;
 use App\Livewire\SelfOrder\Index as SelfOrderIndex;
+use App\Http\Controllers\SelfOrderPaymentController;
 use Illuminate\Http\Request;
 
 /*
@@ -33,6 +34,11 @@ use Illuminate\Http\Request;
 Route::view('/', 'welcome');
 
 Route::get('/o/{token}',SelfOrderIndex::class)->name('self-order.index');
+
+Route::get('/self-order/{selfOrder}/payment/success',[SelfOrderPaymentController::class,'success',])->name('self-order.payment.success');
+
+Route::get('/self-order/{selfOrder}/payment/cancel',[SelfOrderPaymentController::class,'cancel',])->name('self-order.payment.cancel');
+
 
 /*
 |--------------------------------------------------------------------------

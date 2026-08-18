@@ -11,6 +11,7 @@ use Livewire\Component;
 use App\Models\SelfOrder;
 use App\Models\SelfOrderItem;
 use Illuminate\Support\Facades\DB;
+use App\Services\SelfOrderPaymentService;
 
 
 class Index extends Component
@@ -312,7 +313,7 @@ class Index extends Component
             2
         );
     }
-    public function proceedToPayment(): void
+    public function proceedToPayment(SelfOrderPaymentService $paymentService): void
     {
         if ($this->creatingSelfOrder) {
             return;
@@ -518,6 +519,27 @@ class Index extends Component
 
             $this->selfOrderId =
                 $selfOrder->id;
+
+            $stripeSession =
+                $paymentService
+                    ->createCheckoutSession(
+                        $selfOrder
+                    );
+
+
+            if (! $stripeSession->url) {
+                throw new \RuntimeException(
+                    'Stripe hat keine Zahlungs-URL zurückgegeben.'
+                );
+            }
+
+            $this->cart = [];
+            $this->cartOpen = false;
+
+            $this->redirect(
+                $stripeSession->url
+            );
+
 
             /*
              * Der Warenkorb wurde jetzt vollständig und
