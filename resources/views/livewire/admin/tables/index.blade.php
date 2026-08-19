@@ -79,6 +79,34 @@
                         Link testen
                     </a>
 
+                    <a
+                        href="{{
+        route(
+            'admin.tables.qr.pdf',
+            ['table' => $qrTableId],
+            false
+        )
+    }}"
+
+                        class="rounded-xl bg-accent px-4 py-3 text-center text-sm font-semibold text-accent-ink transition active:scale-[0.98]"
+                    >
+                        PDF-Tischkarte herunterladen
+                    </a>
+
+
+                    <a
+                                    href="{{
+                    route(
+                        'admin.tables.qr.png',
+                        ['table' => $qrTableId],
+                        false
+                    )
+                }}"
+
+                                    class="rounded-xl border border-line px-4 py-3 text-center text-sm font-medium transition hover:border-accent hover:text-accent"
+                                >
+                        QR als PNG herunterladen
+                    </a>
 
                     <button
                         type="button"

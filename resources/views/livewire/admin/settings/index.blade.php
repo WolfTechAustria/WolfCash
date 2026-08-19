@@ -246,6 +246,28 @@
                 </p>
             </div>
 
+            <div class="mt-4">
+
+                <label
+                    for="selfOrderingSubtitle"
+                    class="mb-2 block text-sm font-medium"
+                >
+                    Untertitel auf der QR-Tischkarte
+                </label>
+
+                <input
+                    id="selfOrderingSubtitle"
+                    type="text"
+
+                    wire:model.defer="selfOrderingSubtitle"
+
+                    maxlength="120"
+
+                    class="w-full rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-fg outline-none transition focus:border-accent"
+                >
+
+            </div>
+
         </section>
 
         <div class="flex justify-end">

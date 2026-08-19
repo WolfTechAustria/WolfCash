@@ -27,6 +27,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\StripeWebhookController;
 use App\Livewire\SelfOrder\PaymentStatus;
 use App\Http\Controllers\SelfOrderContinueController;
+use App\Http\Controllers\Admin\TableQrController;
 
 
 /*
@@ -192,6 +193,20 @@ Route::middleware('auth')->group(function () {
             Route::get('/settings',SettingsIndex::class)
                 ->name('admin.settings');
 
+
+            //PDF QR Code ansicht
+            Route::get('/admin/tables/{table}/qr/pdf', [TableQrController::class, 'pdf',])
+                ->name('admin.tables.qr.pdf');
+
+            Route::get(
+                '/admin/tables/{table}/qr/png',
+                [
+                    TableQrController::class,
+                    'png',
+                ]
+            )->name(
+                'admin.tables.qr.png'
+            );
 
     });
 });

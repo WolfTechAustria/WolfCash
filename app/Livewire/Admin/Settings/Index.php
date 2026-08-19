@@ -15,6 +15,8 @@ class Index extends Component
 
     public string $selfOrderingTitle = 'Direkt bestellen';
 
+    public string $selfOrderingSubtitle = 'Scannen · Bestellen · Bezahlen';
+
     public function mount(): void
     {
         $this->automaticReceiptPrintingEnabled =
@@ -28,6 +30,9 @@ class Index extends Component
 
         $this->selfOrderingTitle =
             Setting::selfOrderingTitle();
+
+        $this->selfOrderingSubtitle =
+            Setting::selfOrderingSubtitle();
 
     }
 
@@ -59,11 +64,23 @@ class Index extends Component
                 'string',
                 'max:80',
             ],
+            'selfOrderingSubtitle' => [
+                'required',
+                'string',
+                'max:120',
+            ],
         ]);
 
         Setting::putValue(
             Setting::SELF_ORDERING_TITLE,
             trim($this->selfOrderingTitle)
+        );
+
+        Setting::putValue(
+            Setting::SELF_ORDERING_SUBTITLE,
+            trim(
+                $this->selfOrderingSubtitle
+            )
         );
     }
 

@@ -24,6 +24,17 @@ class Setting extends Model
     public const SELF_ORDERING_TITLE =
         'self_ordering_title';
 
+    public const SELF_ORDERING_SUBTITLE =
+        'self_ordering_subtitle';
+
+    public static function selfOrderingSubtitle(): string
+    {
+        return static::getValue(
+            static::SELF_ORDERING_SUBTITLE,
+            'Scannen · Bestellen · Bezahlen'
+        );
+    }
+
     public static function selfOrderingTitle(): string
     {
         return static::getValue(
