@@ -8,7 +8,7 @@ use App\Models\Table;
 use App\Services\TableOrderSessionService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use F9Web\QrCode\Facades\QrCode;
 
 class TableQrController extends Controller
 {
