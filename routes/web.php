@@ -45,10 +45,6 @@ Route::get('/self-order/{selfOrder}/payment/cancel',[SelfOrderPaymentController:
 
 Route::get('/self-order/continue',SelfOrderContinueController::class)->name('self-order.continue');
 
-Route::get('/self-order/resume/{tableSession}',\App\Livewire\SelfOrder\Resume::class)
-    ->middleware('signed')
-    ->name('self-order.resume');
-
 Route::get('/self-order/resume/{tableSession}',\App\Livewire\SelfOrder\Index::class)
     ->middleware('signed')
     ->name('self-order.resume');
