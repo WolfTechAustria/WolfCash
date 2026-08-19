@@ -53,6 +53,14 @@
             >
                 {{ $selfOrder->table->number }}
             </div>
+
+            <a
+                href="{{ route('self-order.continue', absolute: false) }}"
+
+                class="mt-6 block w-full rounded-xl bg-accent px-4 py-3.5 text-center font-semibold text-accent-ink transition active:scale-[0.98]"
+            >
+                Weitere Bestellung aufgeben
+            </a>
         </div>
 
 

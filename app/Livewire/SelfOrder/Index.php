@@ -35,26 +35,43 @@ class Index extends Component
 
     public bool $cartOpen = false;
 
-    public function mount(string $token): void
+    public function mount(?string $token = null,?TableOrderSession $tableSession = null): void
     {
-        $tokenHash = hash(
-            'sha256',
-            $token
-        );
+        if ($tableSession) {
 
-        $session = TableOrderSession::query()
-            ->with('table')
-            ->where(
-                'token_hash',
-                $tokenHash
-            )
-            ->first();
+            /*
+             * Diese Variante darf nur über unsere
+             * signed Route aufgerufen werden.
+             */
+            $session = $tableSession;
 
-        abort_unless(
-            $session !== null,
-            404,
-            'Self-Order-Token wurde nicht gefunden.'
-        );
+        } else {
+
+            if (! $token) {
+                abort(404);
+            }
+
+            $tokenHash = hash(
+                'sha256',
+                $token
+            );
+
+            $session = TableOrderSession::query()
+                ->with('table')
+                ->where(
+                    'token_hash',
+                    $tokenHash
+                )
+                ->first();
+
+            abort_unless(
+                $session !== null,
+                404,
+                'Self-Order-Token wurde nicht gefunden.'
+            );
+        }
+
+        $session->loadMissing('table');
 
         abort_unless(
             $session->isUsable(),
@@ -66,6 +83,15 @@ class Index extends Component
 
         $this->table = $session->table;
 
+        session()->put(
+            'self_order_table_session_id',
+            $session->id
+        );
+
+        /*
+         * Ab hier deine bereits vorhandene
+         * Produktgruppen-/Kategorie-Initialisierung.
+         */
         $firstGroup = ProductGroup::query()
             ->orderBy('sort_order')
             ->orderBy('name')

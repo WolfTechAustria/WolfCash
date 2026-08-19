@@ -26,6 +26,8 @@ use App\Http\Controllers\SelfOrderPaymentController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\StripeWebhookController;
 use App\Livewire\SelfOrder\PaymentStatus;
+use App\Http\Controllers\SelfOrderContinueController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -37,10 +39,19 @@ Route::view('/', 'welcome');
 
 Route::get('/o/{token}',SelfOrderIndex::class)->name('self-order.index');
 
-Route::get('/self-order/{selfOrder}/payment/success',PaymentStatus::class)->name('self-order.payment.success'
-);
+Route::get('/self-order/{selfOrder}/payment/success',PaymentStatus::class)->name('self-order.payment.success');
 
 Route::get('/self-order/{selfOrder}/payment/cancel',[SelfOrderPaymentController::class,'cancel',])->name('self-order.payment.cancel');
+
+Route::get('/self-order/continue',SelfOrderContinueController::class)->name('self-order.continue');
+
+Route::get('/self-order/resume/{tableSession}',\App\Livewire\SelfOrder\Resume::class)
+    ->middleware('signed')
+    ->name('self-order.resume');
+
+Route::get('/self-order/resume/{tableSession}',\App\Livewire\SelfOrder\Index::class)
+    ->middleware('signed')
+    ->name('self-order.resume');
 
 Route::post('/stripe/webhook',[StripeWebhookController::class, 'handle'])->name('stripe.webhook');
 
