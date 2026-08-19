@@ -13,7 +13,7 @@ class OrderService
     public function __construct(private readonly DailyClosingService $dailyClosingService) {
 
     }
-    public function createOrder(int $tableId, array $cart, ?PrintService $printService = null):Order
+    public function createOrder(int $tableId, array $cart, ?PrintService $printService = null, bool $forceNewOrder = false):Order
     {
         $this->dailyClosingService->assertOpen(today());
 
@@ -21,10 +21,21 @@ class OrderService
         {
             $table = Table::findOrFail($tableId);
 
-            $order = Order::query()
-                ->where('table_id', $table->id)
-                ->where('status', Order::STATUS_OPEN)
-                ->first();
+            $order = null;
+
+            /*
+             * Normale Kellnerbestellungen werden weiterhin
+             * an die offene Tischbestellung angehängt.
+             *
+             * SelfOrders können dagegen bewusst eine
+             * eigenständige Order erzwingen.
+             */
+            if (! $forceNewOrder) {
+                $order = Order::query()
+                    ->where('table_id', $table->id)
+                    ->where('status', Order::STATUS_OPEN)
+                    ->first();
+            }
 
             if (! $order) {
                 $order = Order::create([

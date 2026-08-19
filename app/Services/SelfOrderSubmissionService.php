@@ -163,7 +163,8 @@ class SelfOrderSubmissionService
             $order = $this->orderService->createOrder(
                 $lockedSelfOrder->table_id,
                 $cart,
-                $this->printService
+                $this->printService,
+                forceNewOrder: true
             );
 
             /*
@@ -190,6 +191,17 @@ class SelfOrderSubmissionService
 
                 'user_id' =>
                     null,
+            ]);
+
+            /*
+             * Diese Order wurde bereits vor ihrer Übernahme
+             * in WolfCash über Stripe vollständig bezahlt.
+             *
+             * Sie darf daher niemals als offene Tischrechnung
+             * in der Kellner-POS erscheinen.
+             */
+            $order->update([
+                'status' => Order::STATUS_PAID,
             ]);
 
             /*
