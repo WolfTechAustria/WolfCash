@@ -21,6 +21,17 @@ class Setting extends Model
         'value',
     ];
 
+    public const SELF_ORDERING_TITLE =
+        'self_ordering_title';
+
+    public static function selfOrderingTitle(): string
+    {
+        return static::getValue(
+            static::SELF_ORDERING_TITLE,
+            'Direkt bestellen'
+        );
+    }
+
     public static function selfOrderingEnabled(): bool
     {
         return static::boolean(

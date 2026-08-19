@@ -222,6 +222,30 @@
 
             </div>
 
+            <div class="mt-5">
+                <label
+                    for="selfOrderingTitle"
+                    class="mb-2 block text-sm font-medium"
+                >
+                    Überschrift auf der QR-Tischkarte
+                </label>
+
+                <input
+                    id="selfOrderingTitle"
+                    type="text"
+
+                    wire:model.defer="selfOrderingTitle"
+
+                    maxlength="80"
+
+                    class="w-full rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-fg outline-none transition focus:border-accent"
+                >
+
+                <p class="mt-1 text-xs text-dim">
+                    Wird auf den QR-Tischkarten für Gäste angezeigt.
+                </p>
+            </div>
+
         </section>
 
         <div class="flex justify-end">

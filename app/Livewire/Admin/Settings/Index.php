@@ -13,6 +13,8 @@ class Index extends Component
 
     public bool $receiptReprintingEnabled = true;
 
+    public string $selfOrderingTitle = 'Direkt bestellen';
+
     public function mount(): void
     {
         $this->automaticReceiptPrintingEnabled =
@@ -23,6 +25,9 @@ class Index extends Component
 
         $this->selfOrderingEnabled =
             Setting::selfOrderingEnabled();
+
+        $this->selfOrderingTitle =
+            Setting::selfOrderingTitle();
 
     }
 
@@ -46,6 +51,19 @@ class Index extends Component
         Setting::putValue(
             Setting::SELF_ORDERING_ENABLED,
             $this->selfOrderingEnabled
+        );
+
+        $this->validate([
+            'selfOrderingTitle' => [
+                'required',
+                'string',
+                'max:80',
+            ],
+        ]);
+
+        Setting::putValue(
+            Setting::SELF_ORDERING_TITLE,
+            trim($this->selfOrderingTitle)
         );
     }
 
