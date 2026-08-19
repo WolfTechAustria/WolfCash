@@ -55,6 +55,7 @@ class OrderService
                     'quantity' => $quantity,
                     'price' => $item['price'],
                     'note' => $item['note'] ?? null,
+                    'paid_at' => $item['paid_at'] ?? null,
                     'status' => OrderItem::STATUS_PENDING,
                     'production_status' => OrderItem::PRODUCTION_PENDING,
                     'production_completed_quantity' => 0,
