@@ -7,11 +7,13 @@ use App\Models\ProductCategory;
 use App\Models\ProductGroup;
 use App\Models\Table;
 use App\Models\TableOrderSession;
+use App\Models\Setting;
 use Livewire\Component;
 use App\Models\SelfOrder;
 use App\Models\SelfOrderItem;
 use Illuminate\Support\Facades\DB;
 use App\Services\SelfOrderPaymentService;
+
 
 
 class Index extends Component
@@ -77,6 +79,18 @@ class Index extends Component
             $session->isUsable(),
             403,
             'Diese Tischbestellung ist nicht mehr verfügbar.'
+        );
+
+        abort_unless(
+            Setting::selfOrderingEnabled(),
+            403,
+            'Self Ordering ist momentan nicht verfügbar.'
+        );
+
+        abort_unless(
+            $session->table->self_order_enabled,
+            403,
+            'Self Ordering ist für diesen Tisch momentan nicht verfügbar.'
         );
 
         $this->tableSession = $session;
@@ -341,6 +355,26 @@ class Index extends Component
     }
     public function proceedToPayment(SelfOrderPaymentService $paymentService): void
     {
+        if (! Setting::selfOrderingEnabled()) {
+            $this->addError(
+                'cart',
+                'Self Ordering wurde inzwischen deaktiviert.'
+            );
+
+            return;
+        }
+
+        $this->table->refresh();
+
+        if (! $this->table->self_order_enabled) {
+            $this->addError(
+                'cart',
+                'Self Ordering wurde für diesen Tisch deaktiviert.'
+            );
+
+            return;
+        }
+
         if ($this->creatingSelfOrder) {
             return;
         }

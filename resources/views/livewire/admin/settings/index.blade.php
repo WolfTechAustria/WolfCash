@@ -144,6 +144,86 @@
 
         </section>
 
+        <section class="rounded-2xl border border-line bg-surface p-5">
+
+            <div class="mb-5">
+
+                <h2 class="font-display text-lg font-semibold">
+                    Self Ordering
+                </h2>
+
+                <p class="mt-1 text-sm text-dim">
+                    Ermöglicht Gästen die Bestellung und Bezahlung
+                    direkt am Tisch über einen QR-Code.
+                </p>
+
+            </div>
+
+
+            <div
+                class="flex items-start justify-between gap-5 rounded-xl bg-surface-2 p-4"
+            >
+
+                <div>
+
+                    <p class="font-medium">
+                        Self Ordering aktivieren
+                    </p>
+
+                    <p class="mt-1 text-sm text-dim">
+                        Aktiviert die öffentliche Bestellfunktion
+                        grundsätzlich. Einzelne Tische können
+                        zusätzlich separat deaktiviert werden.
+                    </p>
+
+                    @if($selfOrderingEnabled)
+
+                        <p class="mt-2 text-xs font-medium text-free">
+                            Self Ordering ist global aktiviert
+                        </p>
+
+                    @else
+
+                        <p class="mt-2 text-xs font-medium text-occupied">
+                            Self Ordering ist global deaktiviert
+                        </p>
+
+                    @endif
+
+                </div>
+
+
+                <label
+                    class="relative inline-flex shrink-0 cursor-pointer items-center"
+                >
+
+                    <input
+                        type="checkbox"
+                        wire:model.live="selfOrderingEnabled"
+                        class="peer sr-only"
+                    >
+
+                    <span
+                        class="h-7 w-12 rounded-full bg-surface transition
+                       peer-checked:bg-accent
+                       peer-focus-visible:ring-2
+                       peer-focus-visible:ring-accent/40"
+                    >
+
+                <span
+                    class="absolute left-1 top-1 h-5 w-5
+                           rounded-full bg-white shadow transition
+                           peer-checked:translate-x-5"
+                ></span>
+
+            </span>
+
+                </label>
+
+            </div>
+
+        </section>
+
         <div class="flex justify-end">
 
             <button

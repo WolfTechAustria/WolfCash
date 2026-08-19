@@ -7,6 +7,8 @@ use Livewire\Component;
 
 class Index extends Component
 {
+
+    public bool $selfOrderingEnabled = false;
     public bool $automaticReceiptPrintingEnabled = true;
 
     public bool $receiptReprintingEnabled = true;
@@ -18,6 +20,10 @@ class Index extends Component
 
         $this->receiptReprintingEnabled =
             Setting::receiptReprintingEnabled();
+
+        $this->selfOrderingEnabled =
+            Setting::selfOrderingEnabled();
+
     }
 
     public function save(): void
@@ -35,6 +41,11 @@ class Index extends Component
         session()->flash(
             'settingsSaved',
             'Die Einstellungen wurden gespeichert.'
+        );
+
+        Setting::putValue(
+            Setting::SELF_ORDERING_ENABLED,
+            $this->selfOrderingEnabled
         );
     }
 

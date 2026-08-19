@@ -18,6 +18,19 @@ class Index extends Component
         ];
     }
 
+    public function toggleSelfOrder(
+        int $tableId
+    ): void {
+        $table = Table::findOrFail(
+            $tableId
+        );
+
+        $table->update([
+            'self_order_enabled' =>
+                ! $table->self_order_enabled,
+        ]);
+    }
+
     public function save()
     {
         $this->validate();
@@ -26,6 +39,7 @@ class Index extends Component
             'number' => $this->number,
             'name' => $this->name,
             'status' => 'free',
+            'self_order_enabled' => true,
         ]);
 
         $this->reset([

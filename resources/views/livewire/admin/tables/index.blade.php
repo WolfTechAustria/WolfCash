@@ -43,6 +43,7 @@
                 <th class="px-4 py-3 text-left font-medium">Nummer</th>
                 <th class="px-4 py-3 text-left font-medium">Name</th>
                 <th class="px-4 py-3 text-left font-medium">Status</th>
+                <th class="px-4 py-3 text-left font-medium">Self Ordering</th>
                 <th class="px-4 py-3 text-right font-medium">Aktion</th>
             </tr>
             </thead>
@@ -55,6 +56,13 @@
                             <span class="rounded-full px-2.5 py-0.5 text-xs font-medium {{ $table->status === 'occupied' ? 'bg-occupied/15 text-occupied' : 'bg-free/15 text-free' }}">
                                 {{ $table->status === 'occupied' ? 'Belegt' : 'Frei' }}
                             </span>
+                    </td>
+                    <td class="px-4 py-3">
+
+                        <button type="button" wire:click="toggleSelfOrder({{ $table->id }})" class="rounded-full px-3 py-1 text-xs font-medium transition {{ $table->self_order_enabled ? 'bg-free/15 text-free' : 'bg-occupied/15 text-occupied' }}">
+                            {{$table->self_order_enabled ? 'Aktiv' : 'Deaktiviert'}}
+                        </button>
+
                     </td>
                     <td class="px-4 py-3 text-right">
                         <button

@@ -10,7 +10,15 @@ class Table extends Model
         'number',
         'name',
         'status',
+        'self_order_enabled',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'self_order_enabled' => 'boolean',
+        ];
+    }
 
     public function orders()
     {

@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Cache;
 
 class Setting extends Model
 {
+    public const SELF_ORDERING_ENABLED =
+        'self_ordering_enabled';
+
     public const RECEIPT_AUTOMATIC_PRINTING_ENABLED =
         'receipt_automatic_printing_enabled';
 
@@ -17,6 +20,14 @@ class Setting extends Model
         'key',
         'value',
     ];
+
+    public static function selfOrderingEnabled(): bool
+    {
+        return static::boolean(
+            static::SELF_ORDERING_ENABLED,
+            false
+        );
+    }
 
     public static function valueOf(
         string $key,
