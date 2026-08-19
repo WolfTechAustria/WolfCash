@@ -6,74 +6,123 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Table;
 use Illuminate\Support\Facades\DB;
-use App\Jobs\ProcessPrintJob;
 
 class OrderService
 {
-    public function __construct(private readonly DailyClosingService $dailyClosingService) {
-
+    public function __construct(
+        private readonly DailyClosingService $dailyClosingService
+    ) {
     }
-    public function createOrder(int $tableId, array $cart, ?PrintService $printService = null, bool $forceNewOrder = false):Order
-    {
-        $this->dailyClosingService->assertOpen(today());
 
-        return DB::transaction(function () use ($tableId, $cart, $printService)
-        {
-            $table = Table::findOrFail($tableId);
+    public function createOrder(
+        int $tableId,
+        array $cart,
+        ?PrintService $printService = null,
+        bool $forceNewOrder = false
+    ): Order {
+        $this->dailyClosingService->assertOpen(
+            today()
+        );
+
+        return DB::transaction(function () use (
+            $tableId,
+            $cart,
+            $printService,
+            $forceNewOrder
+        ): Order {
+            $table = Table::findOrFail(
+                $tableId
+            );
 
             $order = null;
 
             /*
-             * Normale Kellnerbestellungen werden weiterhin
-             * an die offene Tischbestellung angehängt.
+             * Normale Kellnerbestellung:
+             * bestehende offene Tisch-Order verwenden.
              *
-             * SelfOrders können dagegen bewusst eine
-             * eigenständige Order erzwingen.
+             * SelfOrder:
+             * immer eine neue eigenständige Order.
              */
             if (! $forceNewOrder) {
                 $order = Order::query()
-                    ->where('table_id', $table->id)
-                    ->where('status', Order::STATUS_OPEN)
+                    ->where(
+                        'table_id',
+                        $table->id
+                    )
+                    ->where(
+                        'status',
+                        Order::STATUS_OPEN
+                    )
                     ->first();
             }
 
             if (! $order) {
                 $order = Order::create([
-                    'table_id' => $table->id,
-                    'status' => Order::STATUS_OPEN,
-                    'total' => 0,
+                    'table_id' =>
+                        $table->id,
+
+                    'status' =>
+                        Order::STATUS_OPEN,
+
+                    'total' =>
+                        0,
                 ]);
             }
 
             $createdItems = [];
 
             foreach ($cart as $item) {
-                $quantity = (int) ($item['quantity'] ?? 0);
+                $quantity = (int) (
+                    $item['quantity']
+                    ?? 0
+                );
 
                 if ($quantity <= 0) {
                     continue;
                 }
 
-                /*
-                 * Immer eine neue Bestellposition erstellen.
-                 *
-                 * Auch wenn dasselbe Produkt bereits auf der
-                 * Bestellung vorhanden ist.
-                 */
                 $orderItem = OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $item['id'],
-                    'quantity' => $quantity,
-                    'price' => $item['price'],
-                    'note' => $item['note'] ?? null,
-                    'paid_at' => $item['paid_at'] ?? null,
-                    'status' => OrderItem::STATUS_PENDING,
-                    'production_status' => OrderItem::PRODUCTION_PENDING,
-                    'production_completed_quantity' => 0,
-                    'production_printed_quantity' => 0,
+                    'order_id' =>
+                        $order->id,
+
+                    'product_id' =>
+                        $item['id'],
+
+                    'quantity' =>
+                        $quantity,
+
+                    'price' =>
+                        $item['price'],
+
+                    'note' =>
+                        $item['note']
+                        ?? null,
+
+                    /*
+                     * Bei normalen POS-Bestellungen nicht gesetzt.
+                     *
+                     * SelfOrder übergibt den bereits bestätigten
+                     * Zahlungszeitpunkt.
+                     */
+                    'paid_at' =>
+                        $item['paid_at']
+                        ?? null,
+
+                    'status' =>
+                        OrderItem::STATUS_PENDING,
+
+                    'production_status' =>
+                        OrderItem::PRODUCTION_PENDING,
+
+                    'production_completed_quantity' =>
+                        0,
+
+                    'production_printed_quantity' =>
+                        0,
                 ]);
 
-                $createdItems[] = $orderItem;
+                $createdItems[] =
+                    $orderItem;
             }
 
             $order->recalculateTotal();
@@ -83,11 +132,18 @@ class OrderService
             ]);
 
             /*
-             * Nur die gerade neu bonierten Positionen
-             * an den PrintService übergeben.
+             * Produktionsbon auch bei bereits bezahlten
+             * SelfOrder-Positionen erzeugen.
              */
-            if ($printService && $createdItems !== []) {
-                $printService->createProductionJobs( $order, $createdItems);
+            if (
+                $printService
+                && $createdItems !== []
+            ) {
+                $printService
+                    ->createProductionJobs(
+                        $order,
+                        $createdItems
+                    );
             }
 
             return $order->fresh([
