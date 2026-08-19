@@ -18,7 +18,8 @@ class OrderService
         int $tableId,
         array $cart,
         ?PrintService $printService = null,
-        bool $forceNewOrder = false
+        bool $forceNewOrder = false,
+        string $source = Order::SOURCE_POS,
     ): Order {
         $this->dailyClosingService->assertOpen(
             today()
@@ -28,7 +29,8 @@ class OrderService
             $tableId,
             $cart,
             $printService,
-            $forceNewOrder
+            $forceNewOrder,
+            $source
         ): Order {
             $table = Table::findOrFail(
                 $tableId
@@ -58,14 +60,10 @@ class OrderService
 
             if (! $order) {
                 $order = Order::create([
-                    'table_id' =>
-                        $table->id,
-
-                    'status' =>
-                        Order::STATUS_OPEN,
-
-                    'total' =>
-                        0,
+                    'table_id' => $table->id,
+                    'status' => Order::STATUS_OPEN,
+                    'source' => $source,
+                    'total' => 0,
                 ]);
             }
 

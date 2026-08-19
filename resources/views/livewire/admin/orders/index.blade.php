@@ -197,6 +197,11 @@
                         <p class="font-display text-lg font-semibold">
                             Bestellung #{{ $order->id }}
                         </p>
+                        @if($order->source === \App\Models\Order::SOURCE_SELF_ORDER)
+                            <span class="rounded-full bg-accent/15 px-2.5 py-1 text-xs font-semibold text-accent">
+                                Self Order
+                            </span>
+                        @endif
 
                         <p class="mt-0.5 text-sm text-dim">
                             Tisch {{ $order->table?->number ?? '–' }}
@@ -378,8 +383,18 @@
                     wire:key="order-{{ $order->id }}"
                     class="transition hover:bg-surface-2/40"
                 >
-                    <td class="px-4 py-3 font-medium">
-                        #{{ $order->id }}
+                    <td class="px-4 py-3">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="font-medium">
+                                #{{ $order->id }}
+                            </span>
+
+                            @if($order->source === \App\Models\Order::SOURCE_SELF_ORDER)
+                                <span class="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
+                                    Self Order
+                                </span>
+                            @endif
+                        </div>
                     </td>
 
                     <td class="whitespace-nowrap px-4 py-3 tabular-nums">

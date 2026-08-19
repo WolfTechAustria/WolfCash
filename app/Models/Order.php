@@ -10,7 +10,12 @@ class Order extends Model
         'table_id',
         'status',
         'total',
+        'source',
     ];
+
+    public const SOURCE_POS = 'pos';
+
+    public const SOURCE_SELF_ORDER = 'self_order';
 
     public const STATUS_OPEN = 'open';
     public const STATUS_SENT = 'sent';

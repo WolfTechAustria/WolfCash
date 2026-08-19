@@ -165,7 +165,8 @@ class SelfOrderSubmissionService
                 $lockedSelfOrder->table_id,
                 $cart,
                 $this->printService,
-                forceNewOrder: true
+                forceNewOrder: true,
+                source: Order::SOURCE_SELF_ORDER,
             );
 
             /*
