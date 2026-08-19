@@ -25,6 +25,7 @@ use App\Livewire\SelfOrder\Index as SelfOrderIndex;
 use App\Http\Controllers\SelfOrderPaymentController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\StripeWebhookController;
+use App\Livewire\SelfOrder\PaymentStatus;
 
 /*
 |--------------------------------------------------------------------------
@@ -36,7 +37,8 @@ Route::view('/', 'welcome');
 
 Route::get('/o/{token}',SelfOrderIndex::class)->name('self-order.index');
 
-Route::get('/self-order/{selfOrder}/payment/success',[SelfOrderPaymentController::class,'success',])->name('self-order.payment.success');
+Route::get('/self-order/{selfOrder}/payment/success',PaymentStatus::class)->name('self-order.payment.success'
+);
 
 Route::get('/self-order/{selfOrder}/payment/cancel',[SelfOrderPaymentController::class,'cancel',])->name('self-order.payment.cancel');
 
