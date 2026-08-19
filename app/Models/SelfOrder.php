@@ -40,6 +40,9 @@ class SelfOrder extends Model
         'paid_at',
         'submitted_at',
         'expires_at',
+        'payment_method_type',
+        'payment_wallet',
+        'provider_payment_intent_id',
     ];
 
     protected function casts(): array

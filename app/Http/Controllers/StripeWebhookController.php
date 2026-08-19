@@ -11,6 +11,7 @@ use Stripe\Exception\SignatureVerificationException;
 use Stripe\Webhook;
 use UnexpectedValueException;
 use App\Services\SelfOrderSubmissionService;
+use Stripe\StripeClient;
 
 class StripeWebhookController extends Controller
 {
@@ -18,6 +19,67 @@ class StripeWebhookController extends Controller
     {
 
     }
+
+    private function detectPaymentMethod(
+        object $session
+    ): array {
+        $paymentIntentId =
+            $session->payment_intent ?? null;
+
+        if (! $paymentIntentId) {
+            return [
+                'payment_intent_id' => null,
+                'type' => null,
+                'wallet' => null,
+            ];
+        }
+
+        $stripe = new StripeClient(
+            config('services.stripe.secret')
+        );
+
+        $paymentIntent =
+            $stripe->paymentIntents->retrieve(
+                $paymentIntentId,
+                [
+                    'expand' => [
+                        'latest_charge',
+                    ],
+                ]
+            );
+
+        $charge =
+            $paymentIntent->latest_charge;
+
+        $details =
+            $charge?->payment_method_details;
+
+        $type =
+            $details?->type;
+
+        $wallet = null;
+
+        if (
+            $type === 'card'
+            && $details?->card?->wallet
+        ) {
+            $wallet =
+                $details->card->wallet->type
+                ?? null;
+        }
+
+        return [
+            'payment_intent_id' =>
+                $paymentIntent->id,
+
+            'type' =>
+                $type,
+
+            'wallet' =>
+                $wallet,
+        ];
+    }
+
     public function handle(Request $request): Response
     {
         $payload = $request->getContent();
@@ -136,6 +198,8 @@ class StripeWebhookController extends Controller
                     return $selfOrder;
                 }
 
+
+
                 /*
                  * Richtige Stripe Checkout Session?
                  */
@@ -195,6 +259,28 @@ class StripeWebhookController extends Controller
                     );
                 }
 
+                $paymentMethod =
+                    $this->detectPaymentMethod(
+                        $session
+                    );
+
+                if (
+                    $selfOrder->status
+                    !== SelfOrder::STATUS_SUBMITTED
+                ) {
+                    $selfOrder->update([
+                        'provider_payment_intent_id' =>
+                            $paymentMethod['payment_intent_id'],
+
+                        'payment_method_type' =>
+                            $paymentMethod['type'],
+
+                        'payment_wallet' =>
+                            $paymentMethod['wallet'],
+                    ]);
+                }
+
+
                 /*
                  * Zahlung ist serverseitig bestätigt.
                  */
@@ -208,6 +294,15 @@ class StripeWebhookController extends Controller
 
                         'paid_at' =>
                             now(),
+
+                        'provider_payment_intent_id' =>
+                            $paymentMethod['payment_intent_id'],
+
+                        'payment_method_type' =>
+                            $paymentMethod['type'],
+
+                        'payment_wallet' =>
+                            $paymentMethod['wallet'],
                     ]);
                 }
 
