@@ -195,10 +195,10 @@ Route::middleware('auth')->group(function () {
 
 
             //PDF QR Code ansicht
-            Route::get('/admin/tables/{table}/qr/pdf', [TableQrController::class, 'pdf',])
+            Route::get('/tables/{table}/qr/pdf', [TableQrController::class, 'pdf',])
                 ->name('admin.tables.qr.pdf');
 
-            Route::get('/admin/tables/{table}/qr/png',[ TableQrController::class,'png',])
+            Route::get('/tables/{table}/qr/png',[ TableQrController::class,'png',])
                 ->name('admin.tables.qr.png');
 
     });
