@@ -72,6 +72,16 @@
                         >
                             Löschen
                         </button>
+
+                        <button
+                            type="button"
+
+                            wire:click="showQr({{ $table->id }})"
+
+                            class="rounded-full border border-line px-3 py-1 text-xs font-medium text-fg transition hover:border-accent hover:text-accent"
+                        >
+                            QR-Code
+                        </button>
                     </td>
                 </tr>
             @empty
@@ -84,3 +94,118 @@
     </div>
 
 </div>
+
+@if($qrModalOpen && $qrUrl)
+
+    <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+    >
+
+        <div
+            class="w-full max-w-md rounded-3xl border border-line bg-surface p-6 shadow-2xl"
+        >
+
+            <div
+                class="mb-5 flex items-start justify-between gap-4"
+            >
+
+                <div>
+
+                    <p
+                        class="text-xs font-semibold uppercase tracking-wide text-accent"
+                    >
+                        Self Ordering
+                    </p>
+
+                    <h2
+                        class="mt-1 font-display text-xl font-semibold"
+                    >
+                        Tisch {{ $qrTableNumber }}
+                    </h2>
+
+                </div>
+
+
+                <button
+                    type="button"
+
+                    wire:click="closeQr"
+
+                    class="flex h-9 w-9 items-center justify-center rounded-full border border-line text-lg text-dim"
+                >
+                    ×
+                </button>
+
+            </div>
+
+
+            <div
+                class="rounded-2xl bg-white p-5"
+            >
+
+                <div
+                    class="flex justify-center"
+                >
+                    {!! QrCode::size(260)
+                        ->margin(1)
+                        ->generate($qrUrl) !!}
+                </div>
+
+            </div>
+
+
+            <p
+                class="mt-4 break-all text-center text-xs text-dim"
+            >
+                {{ $qrUrl }}
+            </p>
+
+
+            <div
+                class="mt-5 grid gap-2"
+            >
+
+                <a
+                    href="{{ $qrUrl }}"
+                    target="_blank"
+
+                    class="rounded-xl border border-line px-4 py-3 text-center text-sm font-medium transition hover:border-accent hover:text-accent"
+                >
+                    Link testen
+                </a>
+
+
+                <button
+                    type="button"
+
+                    wire:click="
+                        regenerateQr({{ $qrTableId }})
+                    "
+
+                    wire:confirm="
+                        Wirklich einen neuen QR-Code erzeugen?
+
+                        Der bisherige QR-Code für diesen Tisch
+                        funktioniert danach nicht mehr.
+                    "
+
+                    class="rounded-xl border border-occupied/40 px-4 py-3 text-sm font-medium text-occupied transition hover:bg-occupied/10"
+                >
+                    QR-Code neu erzeugen
+                </button>
+
+            </div>
+
+
+            <p
+                class="mt-4 text-center text-xs leading-relaxed text-dim"
+            >
+                Der QR-Code bleibt dauerhaft gültig,
+                solange er nicht neu erzeugt wird.
+            </p>
+
+        </div>
+
+    </div>
+
+@endif

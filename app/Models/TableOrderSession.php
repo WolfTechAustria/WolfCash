@@ -11,6 +11,7 @@ class TableOrderSession extends Model
     protected $fillable = [
         'table_id',
         'token_hash',
+        'token',
         'active',
         'expires_at',
     ];
@@ -18,6 +19,7 @@ class TableOrderSession extends Model
     protected function casts(): array
     {
         return [
+            'token' => 'encrypted',
             'active' => 'boolean',
             'expires_at' => 'datetime',
         ];
