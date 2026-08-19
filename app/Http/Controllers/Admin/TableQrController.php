@@ -16,56 +16,33 @@ class TableQrController extends Controller
         Table $table,
         TableOrderSessionService $sessionService
     ) {
-        $result =
-            $sessionService->getOrCreate(
-                $table
-            );
+        $result = $sessionService->getOrCreate($table);
 
-        $qrSvg = (string) QrCode::format('svg')
+        $qrPng = QrCode::format('png')
             ->size(700)
             ->margin(2)
             ->errorCorrection('M')
-            ->generate(
-                $result['url']
-            );
+            ->generate($result['url']);
 
         $qrDataUri =
-            'data:image/svg+xml;base64,'
-            .base64_encode($qrSvg);
+            'data:image/png;base64,'
+            . base64_encode($qrPng);
 
         $pdf = Pdf::loadView(
             'admin.tables.qr-pdf',
             [
-                'table' =>
-                    $table,
-
-                'qrDataUri' =>
-                    $qrDataUri,
-
-                'url' =>
-                    $result['url'],
-
-                'title' =>
-                    Setting::selfOrderingTitle(),
-
-                'subtitle' =>
-                    Setting::selfOrderingSubtitle(),
+                'table' => $table,
+                'qrDataUri' => $qrDataUri,
+                'url' => $result['url'],
+                'title' => Setting::selfOrderingTitle(),
+                'subtitle' => Setting::selfOrderingSubtitle(),
             ]
         );
 
-        /*
-         * A6 Hochformat.
-         * Sehr praktisch als Tischaufsteller.
-         */
-        $pdf->setPaper(
-            'a6',
-            'portrait'
-        );
+        $pdf->setPaper('a6', 'portrait');
 
         return $pdf->download(
-            'wolfcash-tisch-'
-            .$table->number
-            .'.pdf'
+            'wolfcash-tisch-'.$table->number.'.pdf'
         );
     }
 
