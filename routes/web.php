@@ -198,15 +198,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/admin/tables/{table}/qr/pdf', [TableQrController::class, 'pdf',])
                 ->name('admin.tables.qr.pdf');
 
-            Route::get(
-                '/admin/tables/{table}/qr/png',
-                [
-                    TableQrController::class,
-                    'png',
-                ]
-            )->name(
-                'admin.tables.qr.png'
-            );
+            Route::get('/admin/tables/{table}/qr/png',[ TableQrController::class,'png',])
+                ->name('admin.tables.qr.png');
 
     });
 });

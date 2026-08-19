@@ -7,19 +7,14 @@ use Illuminate\Support\Facades\Cache;
 
 class Setting extends Model
 {
-    public const SELF_ORDERING_ENABLED =
-        'self_ordering_enabled';
-
     public const RECEIPT_AUTOMATIC_PRINTING_ENABLED =
         'receipt_automatic_printing_enabled';
 
     public const RECEIPT_REPRINTING_ENABLED =
         'receipt_reprinting_enabled';
 
-    protected $fillable = [
-        'key',
-        'value',
-    ];
+    public const SELF_ORDERING_ENABLED =
+        'self_ordering_enabled';
 
     public const SELF_ORDERING_TITLE =
         'self_ordering_title';
@@ -27,29 +22,10 @@ class Setting extends Model
     public const SELF_ORDERING_SUBTITLE =
         'self_ordering_subtitle';
 
-    public static function selfOrderingSubtitle(): string
-    {
-        return static::getValue(
-            static::SELF_ORDERING_SUBTITLE,
-            'Scannen · Bestellen · Bezahlen'
-        );
-    }
-
-    public static function selfOrderingTitle(): string
-    {
-        return static::getValue(
-            static::SELF_ORDERING_TITLE,
-            'Direkt bestellen'
-        );
-    }
-
-    public static function selfOrderingEnabled(): bool
-    {
-        return static::boolean(
-            static::SELF_ORDERING_ENABLED,
-            false
-        );
-    }
+    protected $fillable = [
+        'key',
+        'value',
+    ];
 
     public static function valueOf(
         string $key,
@@ -115,6 +91,30 @@ class Setting extends Model
         return static::boolean(
             static::RECEIPT_REPRINTING_ENABLED,
             true
+        );
+    }
+
+    public static function selfOrderingEnabled(): bool
+    {
+        return static::boolean(
+            static::SELF_ORDERING_ENABLED,
+            false
+        );
+    }
+
+    public static function selfOrderingTitle(): string
+    {
+        return (string) static::valueOf(
+            static::SELF_ORDERING_TITLE,
+            'Direkt bestellen'
+        );
+    }
+
+    public static function selfOrderingSubtitle(): string
+    {
+        return (string) static::valueOf(
+            static::SELF_ORDERING_SUBTITLE,
+            'Scannen · Bestellen · Bezahlen'
         );
     }
 }
