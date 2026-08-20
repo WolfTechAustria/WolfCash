@@ -61,14 +61,14 @@
         }
 
         .qr {
-            width: 75mm;
-            height: 75mm;
+            width: 65mm;
+            height: 65mm;
             margin: 0 auto;
         }
 
         .qr img {
-            width: 75mm;
-            height: 75mm;
+            width: 65mm;
+            height: 65mm;
         }
 
         .subtitle {

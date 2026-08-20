@@ -49,14 +49,14 @@
         }
 
         .qr {
-            width: 70mm;
-            height: 70mm;
+            width: 65mm;
+            height: 65mm;
             margin: 0 auto;
         }
 
         .qr img {
-            width: 70mm;
-            height: 70mm;
+            width: 65mm;
+            height: 65mm;
         }
 
         .subtitle {
