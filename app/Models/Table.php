@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\TableOrderSession;
 
 class Table extends Model
@@ -38,6 +39,16 @@ class Table extends Model
         return $this->hasMany(
             TableOrderSession::class
         );
+    }
+
+    public function activeTableOrderSession(): HasOne
+    {
+        return $this->hasOne(
+            TableOrderSession::class
+        )
+            ->where('active', true)
+            ->whereNotNull('token')
+            ->latestOfMany();
     }
 
     public function selfOrders()

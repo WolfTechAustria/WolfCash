@@ -216,9 +216,46 @@
                     </td>
                     <td class="px-4 py-3">
 
-                        <button type="button" wire:click="toggleSelfOrder({{ $table->id }})" class="rounded-full px-3 py-1 text-xs font-medium transition {{ $table->self_order_enabled ? 'bg-free/15 text-free' : 'bg-occupied/15 text-occupied' }}">
-                            {{$table->self_order_enabled ? 'Aktiv' : 'Deaktiviert'}}
-                        </button>
+                        <div class="flex flex-col items-start gap-2">
+
+                            {{-- Self-Ordering Status --}}
+                            <button
+                                type="button"
+                                wire:click="toggleSelfOrder({{ $table->id }})"
+
+                                class="rounded-full px-3 py-1 text-xs font-medium transition
+                {{
+                    $table->self_order_enabled
+                        ? 'bg-free/15 text-free'
+                        : 'bg-occupied/15 text-occupied'
+                }}"
+                            >
+                                {{
+                                    $table->self_order_enabled
+                                        ? 'Self Order aktiv'
+                                        : 'Self Order aus'
+                                }}
+                            </button>
+
+
+                            {{-- QR Status --}}
+                            @if($table->activeTableOrderSession)
+                                <span class="inline-flex items-center gap-1.5 text-xs font-medium text-free">
+                                    <span class="h-2 w-2 rounded-full bg-free"></span>
+                                    QR vorhanden
+                                </span>
+
+                            @else
+
+                                <span
+                                    class="inline-flex items-center gap-1.5 text-xs font-medium text-dim">
+                                <span class="h-2 w-2 rounded-full bg-dim"></span>
+                                    QR fehlt
+                                </span>
+
+                            @endif
+
+                        </div>
 
                     </td>
                     <td class="px-4 py-3 text-right">
@@ -232,12 +269,14 @@
 
                         <button
                             type="button"
-
                             wire:click="showQr({{ $table->id }})"
-
                             class="rounded-full border border-line px-3 py-1 text-xs font-medium text-fg transition hover:border-accent hover:text-accent"
                         >
-                            QR-Code
+                            @if($table->activeTableOrderSession)
+                                QR anzeigen
+                            @else
+                                QR erzeugen
+                            @endif
                         </button>
                     </td>
                 </tr>

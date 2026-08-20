@@ -132,7 +132,10 @@ class Index extends Component
     public function render()
     {
         return view('livewire.admin.tables.index', [
-            'tables' => Table::orderBy('number')->get(),
+            'tables' => Table::query()
+                ->with('activeTableOrderSession')
+                ->orderBy('number')
+                ->get(),
         ])->layout('components.layouts.app');
     }
 }
