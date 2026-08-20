@@ -85,12 +85,12 @@
 
 <div class="card">
 
-    <div class="brand">
-        WolfCash
-    </div>
-
     <div class="title">
         {{ $title }}
+    </div>
+
+    <div class="subtitle">
+        {{ $subtitle }}
     </div>
 
     <div class="table">
@@ -104,9 +104,6 @@
         >
     </div>
 
-    <div class="subtitle">
-        {{ $subtitle }}
-    </div>
 
     <div class="hint">
         QR-Code mit dem Smartphone scannen,

@@ -39,7 +39,7 @@ class TableQrController extends Controller
             ]
         );
 
-        $pdf->setPaper('a6', 'portrait');
+        $pdf->setPaper('a5', 'portrait');
 
         return $pdf->download(
             'wolfcash-tisch-'.$table->number.'.pdf'
@@ -51,29 +51,178 @@ class TableQrController extends Controller
         Table $table,
         TableOrderSessionService $sessionService
     ): Response {
-        $result =
-            $sessionService->getOrCreate(
-                $table
-            );
+        $result = $sessionService->getOrCreate($table);
+
+        $title = Setting::selfOrderingTitle();
+
+        $subtitle = Setting::selfOrderingSubtitle();
 
         /*
-         * Hier erzeugen wir erstmal den reinen
-         * hochauflösenden QR-Code als PNG.
-         *
-         * Die vollständige gestaltete Tischkarte
-         * als PNG bauen wir im nächsten Schritt,
-         * wenn PDF und QR-Ausgabe sauber laufen.
+         * QR-Code hochauflösend erzeugen.
          */
-        $png = QrCode::format('png')
-            ->size(1200)
-            ->margin(3)
+        $qrPng = QrCode::format('png')
+            ->size(1000)
+            ->margin(2)
             ->errorCorrection('M')
-            ->generate(
-                $result['url']
-            );
+            ->generate($result['url']);
+
+        /*
+         * A6 ungefähr bei 300 DPI:
+         * 105 x 148 mm
+         * = ca. 1240 x 1748 Pixel
+         */
+        $width = 1240;
+        $height = 1748;
+
+        $canvas = new \Imagick();
+
+        $canvas->newImage(
+            $width,
+            $height,
+            new \ImagickPixel('white')
+        );
+
+        $canvas->setImageFormat('png');
+
+        /*
+         * QR einlesen.
+         */
+        $qr = new \Imagick();
+
+        $qr->readImageBlob($qrPng);
+
+        $qrSize = 850;
+
+        $qr->resizeImage(
+            $qrSize,
+            $qrSize,
+            \Imagick::FILTER_LANCZOS,
+            1
+        );
+
+        /*
+         * Text-Renderer.
+         */
+        $draw = new \ImagickDraw();
+
+        $draw->setFillColor(
+            new \ImagickPixel('#111111')
+        );
+
+        $draw->setTextAlignment(
+            \Imagick::ALIGN_CENTER
+        );
+
+        /*
+         * Marke
+         */
+        $draw->setFontSize(34);
+
+        $canvas->annotateImage(
+            $draw,
+            $width / 2,
+            110,
+            0,
+            'WOLFCASH'
+        );
+
+        /*
+         * Überschrift
+         */
+        $draw->setFontSize(64);
+
+        $canvas->annotateImage(
+            $draw,
+            $width / 2,
+            240,
+            0,
+            $title
+        );
+
+        /*
+         * Tisch
+         */
+        $draw->setFontSize(44);
+
+        $canvas->annotateImage(
+            $draw,
+            $width / 2,
+            330,
+            0,
+            'Tisch '.$table->number
+        );
+
+        /*
+         * QR-Code mittig einsetzen.
+         */
+        $qrX = (int) (($width - $qrSize) / 2);
+
+        $qrY = 400;
+
+        $canvas->compositeImage(
+            $qr,
+            \Imagick::COMPOSITE_OVER,
+            $qrX,
+            $qrY
+        );
+
+        /*
+         * Untertitel
+         */
+        $draw->setFontSize(40);
+
+        $canvas->annotateImage(
+            $draw,
+            $width / 2,
+            1370,
+            0,
+            $subtitle
+        );
+
+        /*
+         * Hinweis
+         */
+        $draw->setFillColor(
+            new \ImagickPixel('#666666')
+        );
+
+        $draw->setFontSize(26);
+
+        $canvas->annotateImage(
+            $draw,
+            $width / 2,
+            1445,
+            0,
+            'QR-Code scannen und direkt bestellen'
+        );
+
+        /*
+         * Tisch-ID klein unten.
+         */
+        $draw->setFillColor(
+            new \ImagickPixel('#999999')
+        );
+
+        $draw->setFontSize(20);
+
+        $canvas->annotateImage(
+            $draw,
+            $width / 2,
+            1650,
+            0,
+            'Tisch '.$table->number
+        );
+
+        $content = $canvas->getImagesBlob();
+
+        $qr->clear();
+        $qr->destroy();
+
+        $canvas->clear();
+        $canvas->destroy();
 
         return response(
-            $png,
+            $content,
             200,
             [
                 'Content-Type' =>
@@ -82,7 +231,7 @@ class TableQrController extends Controller
                 'Content-Disposition' =>
                     'attachment; filename="wolfcash-tisch-'
                     .$table->number
-                    .'-qr.png"',
+                    .'.png"',
             ]
         );
     }
