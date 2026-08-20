@@ -73,8 +73,8 @@
         }
 
         .url {
-            margin-top: 4mm;
-            font-size: 5.5pt;
+            margin-top: 3mm;
+            font-size: 5pt;
             color: #999999;
             word-wrap: break-word;
         }
