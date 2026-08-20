@@ -201,5 +201,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/tables/{table}/qr/png',[ TableQrController::class,'png',])
                 ->name('admin.tables.qr.png');
 
+            Route::get('/tables/qr/pdf', [TableQrController::class, 'pdfAll',])
+                ->name('admin.tables.qr.pdf-all');
+
     });
 });

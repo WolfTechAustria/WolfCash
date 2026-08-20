@@ -177,6 +177,20 @@
 
     </form>
 
+        <a
+            href="{{
+        route(
+            'admin.tables.qr.pdf-all',
+            [],
+            false
+        )
+    }}"
+
+            class="inline-flex items-center rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink transition active:scale-[0.98]"
+        >
+            Alle QR-Tischkarten als PDF
+        </a>
+
     <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-dim">Vorhandene Tische</p>
 
     <div class="overflow-x-auto rounded-2xl border border-line">

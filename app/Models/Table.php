@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\TableOrderSession;
 
 class Table extends Model
 {
@@ -31,7 +33,7 @@ class Table extends Model
             ->where('status', Order::STATUS_OPEN);
     }
 
-    public function tableOrderSessions()
+    public function tableOrderSessions(): HasMany
     {
         return $this->hasMany(
             TableOrderSession::class

@@ -235,4 +235,90 @@ class TableQrController extends Controller
             ]
         );
     }
+
+    public function pdfAll()
+    {
+        $tables = Table::query()
+            ->where('self_order_enabled', true)
+            ->orderBy('number')
+            ->get();
+
+        $cards = [];
+
+        foreach ($tables as $table) {
+
+            /*
+             * Wichtig:
+             * Bestehende Session nur lesen.
+             * Hier KEIN getOrCreate(), damit ein alter QR
+             * nicht versehentlich ersetzt wird.
+             */
+            $session = $table->tableOrderSessions()
+                ->where('active', true)
+                ->whereNotNull('token')
+                ->latest('id')
+                ->first();
+
+            if (! $session) {
+                continue;
+            }
+
+            $token = $session->token;
+
+            if (! $token) {
+                continue;
+            }
+
+            $baseUrl = rtrim(
+                config('self_order.base_url'),
+                '/'
+            );
+
+            $url = $baseUrl.'/o/'.$token;
+
+            $qrPng = QrCode::format('png')
+                ->size(700)
+                ->margin(2)
+                ->errorCorrection('M')
+                ->generate($url);
+
+            $cards[] = [
+                'table' => $table,
+
+                'url' => $url,
+
+                'qrDataUri' =>
+                    'data:image/png;base64,'
+                    .base64_encode($qrPng),
+            ];
+        }
+
+        abort_if(
+            empty($cards),
+            404,
+            'Es sind keine verwendbaren Self-Ordering QR-Codes vorhanden.'
+        );
+
+        $pdf = Pdf::loadView(
+            'admin.tables.qr-pdf-all',
+            [
+                'cards' => $cards,
+
+                'title' =>
+                    Setting::selfOrderingTitle(),
+
+                'subtitle' =>
+                    Setting::selfOrderingSubtitle(),
+            ]
+        );
+
+        $pdf->setPaper(
+            'a6',
+            'portrait'
+        );
+
+        return $pdf->download(
+            'wolfcash-self-ordering-tischkarten.pdf'
+        );
+    }
 }
