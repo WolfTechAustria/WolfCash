@@ -39,7 +39,7 @@ class TableQrController extends Controller
             ]
         );
 
-        $pdf->setPaper('a5', 'portrait');
+        $pdf->setPaper('a6', 'portrait');
 
         return $pdf->download(
             'wolfcash-tisch-'.$table->number.'.pdf'

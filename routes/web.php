@@ -145,9 +145,6 @@ Route::middleware('auth')->group(function () {
             Route::get('/orders', OrdersIndex::class)
                 ->name('admin.orders');
 
-            Route::get('/orders', OrdersIndex::class)
-                ->name('admin.orders');
-
             Route::get('/orders/{order}', OrderShow::class)
                 ->name('admin.orders.show');
 

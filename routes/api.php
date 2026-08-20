@@ -1,10 +1,16 @@
 <?php
 
 use App\Http\Controllers\Api\DeviceController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\MobileSessionController;
 use App\Http\Controllers\Api\StripeTerminalController;
+use Illuminate\Support\Facades\Route;
 
+
+/*
+|--------------------------------------------------------------------------
+| Device Registration
+|--------------------------------------------------------------------------
+*/
 
 Route::prefix('device')->group(function (): void {
 
@@ -18,28 +24,29 @@ Route::prefix('device')->group(function (): void {
         [DeviceController::class, 'status']
     );
 
-
-
 });
 
 
+/*
+|--------------------------------------------------------------------------
+| Authenticated Mobile Device API
+|--------------------------------------------------------------------------
+*/
 
-Route::middleware('device.auth')->group(function (): void {
-    Route::post(
-        '/stripe/terminal/connection-token',
-        [
-            StripeTerminalController::class,
-            'connectionToken',
-        ]
-    );
+Route::middleware('device.auth')
+    ->group(function (): void {
 
-    Route::post(
-        '/mobile/session',
-        [
-            MobileSessionController::class,
-            'store',
-        ]
-    );
-});
+        Route::post(
+            '/mobile/session',
+            [MobileSessionController::class, 'store']
+        );
 
+        Route::post(
+            '/stripe/terminal/connection-token',
+            [
+                StripeTerminalController::class,
+                'connectionToken',
+            ]
+        );
 
+    });
