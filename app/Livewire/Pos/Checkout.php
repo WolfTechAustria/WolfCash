@@ -539,7 +539,18 @@ class Checkout extends Component
 
     public function backToPos()
     {
-        return redirect()->route('pos.index');
+        return redirect($this->backUrl);
+    }
+
+    /**
+     * Rücksprung zur richtigen Kasse: stationäre Kassen zurück auf
+     * ihr eigenes Produktraster, Kellner zur Tischauswahl.
+     */
+    public function getBackUrlProperty(): string
+    {
+        return $this->table->is_stationary
+            ? route('pos.stationary', $this->table, false)
+            : route('pos.index', [], false);
     }
 
     public function render()

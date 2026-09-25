@@ -58,7 +58,7 @@
 
         <div class="mb-4 flex items-center gap-3">
             <a
-                href="{{ route('pos.index'), false }}"
+                href="{{ $this->backUrl }}"
                 class="flex h-9 w-9 items-center justify-center rounded-full border border-line text-dim transition hover:border-accent hover:text-accent"
                 aria-label="Zurück zur Kasse"
             >
@@ -73,7 +73,7 @@
 
             <div class="rounded-2xl border border-line bg-surface px-5 py-8 text-center">
                 <p class="text-dim">Keine offene Bestellung vorhanden.</p>
-                <a href="{{ route('pos.index') }}" class="mt-3 inline-block text-sm font-medium text-accent">
+                <a href="{{ $this->backUrl }}" class="mt-3 inline-block text-sm font-medium text-accent">
                     Zurück zur Kasse
                 </a>
             </div>
