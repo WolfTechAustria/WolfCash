@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Http\Middleware\EnsureFloorDevice;
 use App\Printing\EscPosNetworkTransport;
 use App\Printing\PrintTransport;
 use App\Printing\SimulationPrintTransport;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 use RuntimeException;
 
 class AppServiceProvider extends ServiceProvider
@@ -34,6 +36,12 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        //
+        /*
+         * Geräteprüfung nicht nur beim Seitenaufruf, sondern auch
+         * bei jedem Livewire-Request der Kassenoberflächen.
+         */
+        Livewire::addPersistentMiddleware([
+            EnsureFloorDevice::class,
+        ]);
     }
 }

@@ -64,17 +64,31 @@ Route::post('/stripe/webhook',[StripeWebhookController::class, 'handle'])->name(
 Route::view('/login', 'auth.login')->name('login');
 
 
-Route::get('/pos', PosIndex::class)
-    ->name('pos.index');
+/*
+|--------------------------------------------------------------------------
+| Kassen-/Kellner-/Produktionsoberflächen
+|--------------------------------------------------------------------------
+|
+| Nur für freigegebene Geräte (Browser-Cookie oder Mobile-App-Session)
+| sowie angemeldete Admins, siehe EnsureFloorDevice.
+|
+*/
 
-Route::get('/pos/stationary/{table}', StationaryIndex::class)
-    ->name('pos.stationary');
+Route::middleware('device.floor')->group(function () {
 
-Route::get('/pos/checkout/{table}', Checkout::class)
-    ->name('pos.checkout');
+    Route::get('/pos', PosIndex::class)
+        ->name('pos.index');
 
-Route::get('/production', ProductionIndex::class)
-    ->name('production.index');
+    Route::get('/pos/stationary/{table}', StationaryIndex::class)
+        ->name('pos.stationary');
+
+    Route::get('/pos/checkout/{table}', Checkout::class)
+        ->name('pos.checkout');
+
+    Route::get('/production', ProductionIndex::class)
+        ->name('production.index');
+
+});
 
 
 /*

@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'device.approved' => \App\Http\Middleware\EnsureDeviceIsApproved::class,
             'device.auth' => AuthenticateDevice::class,
+            'device.floor' => \App\Http\Middleware\EnsureFloorDevice::class,
         ]);
         $middleware->trustProxies(at: '*');
 
@@ -35,6 +36,12 @@ return Application::configure(basePath: dirname(__DIR__))
          */
         $middleware->encryptCookies(except: [
             'wolfcash_theme',
+
+            /*
+             * Geräte-Fingerprint, von der Freigabe-Seite aus
+             * localStorage gesetzt (EnsureFloorDevice).
+             */
+            'wolfcash_device',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

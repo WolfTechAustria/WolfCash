@@ -47,6 +47,15 @@
                         @else
                             <div class="flex items-center gap-2">
                                 {{ $device->name }}
+
+                                {{-- Code wie auf der Freigabe-Seite des Geräts angezeigt --}}
+                                <span
+                                    class="rounded-full bg-surface-2 px-2 py-0.5 font-mono text-xs text-dim"
+                                    title="Geräte-Code"
+                                >
+                                    {{ strtoupper(substr($device->fingerprint, 0, 4)) }}
+                                </span>
+
                                 <button
                                     wire:click="startEditing({{ $device->id }})"
                                     class="text-xs font-medium text-dim underline decoration-dotted transition hover:text-accent"

@@ -242,74 +242,29 @@
 @livewireScripts
 @fluxScripts
 
+{{--
+    Geräteprüfung der Kassenoberflächen läuft serverseitig
+    (EnsureFloorDevice); nicht freigegebene Browser sehen die
+    Freigabe-Seite resources/views/device/gate.blade.php.
+    Wird ein Gerät während der Arbeit gesperrt, weist der Server den
+    nächsten Livewire-Klick mit 423 ab: neu laden zeigt die Sperrseite.
+--}}
 @if($isFloor)
     <script>
-        function getFingerprint() {
-            let key = localStorage.getItem('device_fingerprint');
-
-            if (!key) {
-                key = crypto.randomUUID();
-                localStorage.setItem('device_fingerprint', key);
-            }
-
-            return key;
-        }
-
-        async function checkDevice() {
-            const fingerprint = getFingerprint();
-
-            await fetch('/api/device/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    uuid: fingerprint,
-                    fingerprint: fingerprint,
-                    name: 'Browser ' + (navigator.userAgentData?.platform || navigator.platform || 'Web'),
-                    platform: 'web'
-                })
+        (function () {
+            const register = () => Livewire.hook('request', ({ fail }) => {
+                fail(({ status, preventDefault }) => {
+                    if (status === {{ \App\Http\Middleware\EnsureFloorDevice::LIVEWIRE_STATUS }}) {
+                        preventDefault();
+                        location.reload();
+                    }
+                });
             });
 
-            const res = await fetch('/api/device/status', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    fingerprint: fingerprint
-                })
-            });
-
-            const data = await res.json();
-
-            /*
-            //DeviceToken Check
-
-            if (data.status === 'pending') {
-                document.body.innerHTML = `
-                <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;padding:2rem;text-align:center;background:#17140f;color:#f5f1e8;font-family:Inter,sans-serif;">
-                    <div style="font-size:2.5rem;">⏳</div>
-                    <h1 style="font-size:1.25rem;font-weight:600;">Gerät wartet auf Freigabe</h1>
-                    <p style="color:#a89f8d;">Bitte Admin kontaktieren</p>
-                </div>
-            `;
-            }
-
-            if (data.status === 'blocked') {
-                document.body.innerHTML = `
-                <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;padding:2rem;text-align:center;background:#17140f;color:#e2555f;font-family:Inter,sans-serif;">
-                    <div style="font-size:2.5rem;">⛔</div>
-                    <h1 style="font-size:1.25rem;font-weight:600;">Zugriff gesperrt</h1>
-                </div>
-            `;
-            }
-
-             */
-        }
-
-        checkDevice();
+            window.Livewire?.hook
+                ? register()
+                : document.addEventListener('livewire:init', register);
+        })();
     </script>
 @endif
 </body>
