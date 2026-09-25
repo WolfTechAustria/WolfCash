@@ -234,6 +234,7 @@ class SystemResetService
                     Setting::SELF_ORDERING_ENABLED,
                     Setting::SELF_ORDERING_TITLE,
                     Setting::SELF_ORDERING_SUBTITLE,
+                    Setting::CARD_PAYMENT_ENABLED,
                 ] as $key) {
                     Cache::forget('setting:'.$key);
                 }

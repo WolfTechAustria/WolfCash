@@ -13,6 +13,8 @@ class Index extends Component
 
     public bool $receiptReprintingEnabled = true;
 
+    public bool $cardPaymentEnabled = true;
+
     public string $selfOrderingTitle = 'Direkt bestellen';
 
     public string $selfOrderingSubtitle = 'Scannen · Bestellen · Bezahlen';
@@ -24,6 +26,9 @@ class Index extends Component
 
         $this->receiptReprintingEnabled =
             Setting::receiptReprintingEnabled();
+
+        $this->cardPaymentEnabled =
+            Setting::cardPaymentEnabled();
 
         $this->selfOrderingEnabled =
             Setting::selfOrderingEnabled();
@@ -64,6 +69,11 @@ class Index extends Component
         Setting::putValue(
             Setting::RECEIPT_REPRINTING_ENABLED,
             $this->receiptReprintingEnabled
+        );
+
+        Setting::putValue(
+            Setting::CARD_PAYMENT_ENABLED,
+            $this->cardPaymentEnabled
         );
 
         Setting::putValue(

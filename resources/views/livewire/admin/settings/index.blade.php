@@ -149,6 +149,66 @@
             <div class="mb-5">
 
                 <h2 class="font-display text-lg font-semibold">
+                    Zahlungsarten
+                </h2>
+
+                <p class="mt-1 text-sm text-dim">
+                    Legt fest, welche Zahlungsarten an der Kassa
+                    angeboten werden. Barzahlung ist immer verfügbar.
+                </p>
+
+            </div>
+
+            <div class="flex items-start justify-between gap-5 rounded-xl bg-surface-2 p-4">
+
+                <div>
+
+                    <p class="font-medium">
+                        Kartenzahlung
+                    </p>
+
+                    <p class="mt-1 text-sm text-dim">
+                        Zeigt beim Abrechnen die Buttons für Kartenzahlung
+                        über das Kartenterminal der Kassen-App an.
+                    </p>
+
+                    @if($cardPaymentEnabled)
+                        <p class="mt-2 text-xs font-medium text-free">
+                            Kartenzahlung aktiviert
+                        </p>
+                    @else
+                        <p class="mt-2 text-xs font-medium text-occupied">
+                            Kartenzahlung deaktiviert – nur Barzahlung
+                        </p>
+                    @endif
+
+                </div>
+
+                <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+
+                    <input
+                        type="checkbox"
+                        wire:model.live="cardPaymentEnabled"
+                        class="peer sr-only"
+                    >
+
+                    <span class="h-7 w-12 rounded-full bg-surface transition peer-checked:bg-accent peer-focus-visible:ring-2 peer-focus-visible:ring-accent/40">
+
+                        <span class="absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5"></span>
+
+                    </span>
+
+                </label>
+
+            </div>
+
+        </section>
+
+        <section class="rounded-2xl border border-line bg-surface p-5">
+
+            <div class="mb-5">
+
+                <h2 class="font-display text-lg font-semibold">
                     Self Ordering
                 </h2>
 

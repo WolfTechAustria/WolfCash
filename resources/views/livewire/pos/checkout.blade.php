@@ -256,6 +256,8 @@
             </details>
 
             {{-- Zahlungs-Aktionen --}}
+            @php($cardPaymentEnabled = $this->cardPaymentEnabled)
+
             <div class="grid grid-cols-2 gap-2.5">
                 <button
                     wire:click="paySelected('cash')"
@@ -263,24 +265,28 @@
                 >
                     Auswahl · Bar
                 </button>
-                <button
-                    wire:click="startSelectedCardPayment"
-                    class="rounded-xl bg-accent py-3 text-sm font-semibold text-accent-ink transition active:scale-[0.98]"
-                >
-                    Auswahl · Karte
-                </button>
+                @if($cardPaymentEnabled)
+                    <button
+                        wire:click="startSelectedCardPayment"
+                        class="rounded-xl bg-accent py-3 text-sm font-semibold text-accent-ink transition active:scale-[0.98]"
+                    >
+                        Auswahl · Karte
+                    </button>
+                @endif
                 <button
                     wire:click="payOpen('cash')"
                     class="rounded-xl border border-line py-3 text-sm font-medium text-fg transition active:scale-[0.98]"
                 >
                     Rest · Bar
                 </button>
-                <button
-                    wire:click="startRemainingCardPayment"
-                    class="rounded-xl border border-line py-3 text-sm font-medium text-fg transition active:scale-[0.98]"
-                >
-                    Rest · Karte
-                </button>
+                @if($cardPaymentEnabled)
+                    <button
+                        wire:click="startRemainingCardPayment"
+                        class="rounded-xl border border-line py-3 text-sm font-medium text-fg transition active:scale-[0.98]"
+                    >
+                        Rest · Karte
+                    </button>
+                @endif
 
             </div>
 

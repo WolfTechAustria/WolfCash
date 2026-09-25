@@ -4,6 +4,7 @@ namespace App\Livewire\Pos;
 
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Setting;
 use App\Models\Table;
 use App\Services\PaymentReceiptService;
 use App\Services\PaymentService;
@@ -385,9 +386,28 @@ class Checkout extends Component
         $this->selectedForPayment = $sanitized;
     }
 
+    public function getCardPaymentEnabledProperty(): bool
+    {
+        return Setting::cardPaymentEnabled();
+    }
+
+    private function ensureCardPaymentEnabled(): bool
+    {
+        if ($this->cardPaymentEnabled) {
+            return true;
+        }
+
+        $this->addError(
+            'payment',
+            'Kartenzahlung ist derzeit deaktiviert.'
+        );
+
+        return false;
+    }
+
     public function startSelectedCardPayment(): void
     {
-        if (! $this->order) {
+        if (! $this->order || ! $this->ensureCardPaymentEnabled()) {
             return;
         }
 
@@ -431,7 +451,7 @@ class Checkout extends Component
     }
     public function startRemainingCardPayment(): void
     {
-        if (! $this->order) {
+        if (! $this->order || ! $this->ensureCardPaymentEnabled()) {
             return;
         }
 

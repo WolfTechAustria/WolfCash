@@ -22,6 +22,9 @@ class Setting extends Model
     public const SELF_ORDERING_SUBTITLE =
         'self_ordering_subtitle';
 
+    public const CARD_PAYMENT_ENABLED =
+        'card_payment_enabled';
+
     protected $fillable = [
         'key',
         'value',
@@ -90,6 +93,14 @@ class Setting extends Model
     {
         return static::boolean(
             static::RECEIPT_REPRINTING_ENABLED,
+            true
+        );
+    }
+
+    public static function cardPaymentEnabled(): bool
+    {
+        return static::boolean(
+            static::CARD_PAYMENT_ENABLED,
             true
         );
     }
