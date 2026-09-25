@@ -38,26 +38,11 @@ class Index extends Component
 
     public function save(): void
     {
-        Setting::putValue(
-            Setting::RECEIPT_AUTOMATIC_PRINTING_ENABLED,
-            $this->automaticReceiptPrintingEnabled
-        );
-
-        Setting::putValue(
-            Setting::RECEIPT_REPRINTING_ENABLED,
-            $this->receiptReprintingEnabled
-        );
-
-        session()->flash(
-            'settingsSaved',
-            'Die Einstellungen wurden gespeichert.'
-        );
-
-        Setting::putValue(
-            Setting::SELF_ORDERING_ENABLED,
-            $this->selfOrderingEnabled
-        );
-
+        /*
+         * Erst validieren, dann speichern: sonst werden die
+         * vorherigen Einstellungen bereits übernommen, obwohl
+         * das Formular als Ganzes fehlschlägt.
+         */
         $this->validate([
             'selfOrderingTitle' => [
                 'required',
@@ -72,6 +57,21 @@ class Index extends Component
         ]);
 
         Setting::putValue(
+            Setting::RECEIPT_AUTOMATIC_PRINTING_ENABLED,
+            $this->automaticReceiptPrintingEnabled
+        );
+
+        Setting::putValue(
+            Setting::RECEIPT_REPRINTING_ENABLED,
+            $this->receiptReprintingEnabled
+        );
+
+        Setting::putValue(
+            Setting::SELF_ORDERING_ENABLED,
+            $this->selfOrderingEnabled
+        );
+
+        Setting::putValue(
             Setting::SELF_ORDERING_TITLE,
             trim($this->selfOrderingTitle)
         );
@@ -81,6 +81,11 @@ class Index extends Component
             trim(
                 $this->selfOrderingSubtitle
             )
+        );
+
+        session()->flash(
+            'settingsSaved',
+            'Die Einstellungen wurden gespeichert.'
         );
     }
 

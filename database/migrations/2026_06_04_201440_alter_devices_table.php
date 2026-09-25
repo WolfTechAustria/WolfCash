@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::table('devices', function (Blueprint $table) {
             if (Schema::hasColumn('devices', 'uuid')) {
+                /*
+                 * Der zugehörige Unique-Index muss vor der Spalte
+                 * entfernt werden, sonst schlägt dropColumn() unter
+                 * SQLite fehl (Postgres räumt das automatisch auf).
+                 */
+                $table->dropUnique('devices_uuid_unique');
                 $table->dropColumn('uuid');
             }
         });

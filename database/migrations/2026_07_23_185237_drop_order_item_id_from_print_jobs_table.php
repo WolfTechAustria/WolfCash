@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::table('print_jobs', function (Blueprint $table) {
             if (Schema::hasColumn('print_jobs', 'order_item_id')) {
+                /*
+                 * Der Foreign-Key muss vor der Spalte entfernt werden,
+                 * sonst schlägt dropColumn() unter SQLite fehl
+                 * (Postgres räumt das automatisch auf).
+                 */
+                $table->dropForeign(['order_item_id']);
                 $table->dropColumn('order_item_id');
             }
         });

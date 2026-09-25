@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use App\Enums\DeviceStatus;
 use App\Models\Device;
 
 class EnsureDeviceIsApproved
@@ -20,7 +21,7 @@ class EnsureDeviceIsApproved
 
         $device = Device::find($deviceId);
 
-        if (!$device || $device->status !== 'approved') {
+        if (!$device || $device->status !== DeviceStatus::Approved) {
             return response()->json([
                 'message' => 'Device not approved'
             ], 403);
