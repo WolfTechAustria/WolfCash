@@ -26,6 +26,16 @@ return Application::configure(basePath: dirname(__DIR__))
                 'stripe/webhook',
             ]
         );
+
+        /*
+         * Wird direkt per JavaScript (document.cookie) gesetzt und
+         * gelesen, u. a. für die Day/Night-Umschaltung der Kellner-UI.
+         * Ohne Ausnahme würde die serverseitige Entschlüsselung des
+         * unverschlüsselten Client-Cookies fehlschlagen.
+         */
+        $middleware->encryptCookies(except: [
+            'wolfcash_theme',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

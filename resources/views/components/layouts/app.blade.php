@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de" class="dark">
+<html lang="de" class="{{ request()->cookie('wolfcash_theme', 'dark') === 'light' ? '' : 'dark' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -18,50 +18,47 @@
 @php
     $isFloor = request()->routeIs(['pos.*', 'production.index']);
 
-    $adminLinks = [
-        ['route' => 'admin.dashboard', 'label' => 'Übersicht'],
-        ['route' => 'admin.orders', 'label' => 'Bestellungen'],
-        ['route' => 'admin.cancellations', 'label' => 'Stornos'],
-        ['route' => 'admin.daily-summary', 'label' => 'Tagesübersicht'],
-        ['route' => 'admin.devices', 'label' => 'Geräte'],
-        ['route' => 'admin.tables', 'label' => 'Tische'],
-        ['route' => 'admin.products', 'label' => 'Produkte'],
-        ['route' => 'admin.product-groups', 'label' => 'Produktgruppen'],
-        ['route' => 'admin.product-categories', 'label' => 'Kategorien'],
-        ['route' => 'admin.printers', 'label' => 'Drucker'],
-        ['route' => 'admin.production-stations', 'label' => 'Arbeitsplätze'],
-        ['route' => 'admin.print-jobs', 'label' => 'Druckjobs'],
+    /*
+     * Sidebar-Navigation für den Backoffice-Bereich, gruppiert
+     * nach Themenblock. "Einstellungen" ist bewusst nicht Teil
+     * dieser Liste — sie sitzt fix unten links im Sidebar-Fuß.
+     */
+    $navGroups = [
+        [
+            'items' => [
+                ['route' => 'admin.dashboard', 'label' => 'Übersicht', 'icon' => 'home'],
+                ['route' => 'admin.tables', 'label' => 'Tische', 'icon' => 'building-storefront'],
+                ['route' => 'admin.products', 'label' => 'Produkte', 'icon' => 'shopping-bag'],
+                ['route' => 'admin.product-groups', 'label' => 'Produktgruppen', 'icon' => 'queue-list'],
+                ['route' => 'admin.product-categories', 'label' => 'Kategorien', 'icon' => 'list-bullet'],
+            ],
+        ],
+        [
+            'title' => 'Bestellungen',
+            'items' => [
+                ['route' => 'admin.orders', 'label' => 'Bestellungen', 'icon' => 'clipboard-document-list'],
+                ['route' => 'admin.cancellations', 'label' => 'Stornos', 'icon' => 'receipt-refund'],
+                ['route' => 'admin.daily-summary', 'label' => 'Tagesübersicht', 'icon' => 'chart-pie'],
+                ['route' => 'admin.daily-closings', 'label' => 'Tagesabschlüsse', 'icon' => 'clipboard-document-check'],
+                ['route' => 'admin.product-reports', 'label' => 'Verkaufsstatistik', 'icon' => 'chart-bar'],
+            ],
+        ],
+        [
+            'title' => 'Technik',
+            'items' => [
+                ['route' => 'admin.printers', 'label' => 'Drucker', 'icon' => 'printer'],
+                ['route' => 'admin.production-stations', 'label' => 'Arbeitsplätze', 'icon' => 'building-office'],
+                ['route' => 'admin.print-jobs', 'label' => 'Druckjobs', 'icon' => 'inbox-stack'],
+                ['route' => 'admin.devices', 'label' => 'Geräte', 'icon' => 'device-tablet'],
+            ],
+        ],
+        [
+            'title' => 'Gefahrenzone',
+            'items' => [
+                ['route' => 'admin.system-reset', 'label' => 'System zurücksetzen', 'icon' => 'exclamation-triangle', 'danger' => true],
+            ],
+        ],
     ];
-
-    $orderLinks = [
-
-        ['route' => 'admin.orders', 'label' => 'Bestellungen'],
-        ['route' => 'admin.cancellations', 'label' => 'Stornos'],
-        ['route' => 'admin.daily-summary', 'label' => 'Tagesübersicht'],
-        ['route' => 'admin.daily-closings', 'label' => 'Tagesabschlüsse'],
-
-    ];
-
-    $primaryLinks = [
-        ['route' => 'admin.dashboard', 'label' => 'Übersicht'],
-        ['route' => 'admin.tables', 'label' => 'Tische'],
-        ['route' => 'admin.products', 'label' => 'Produkte'],
-
-        ['route' => 'admin.product-reports', 'label' => 'Produktauswertung'],
-    ];
-
-    $settingsLinks = [
-        ['route' => 'admin.product-groups', 'label' => 'Produktgruppen'],
-        ['route' => 'admin.product-categories', 'label' => 'Kategorien'],
-        ['route' => 'admin.printers', 'label' => 'Drucker'],
-        ['route' => 'admin.production-stations', 'label' => 'Arbeitsplätze'],
-        ['route' => 'admin.print-jobs', 'label' => 'Druckjobs'],
-        ['route' => 'admin.devices', 'label' => 'Geräte'],
-        ['route' => 'admin.settings', 'label' => 'Allgemeine Einstellungen'],
-    ];
-
-    $settingsActive = collect($settingsLinks)->contains(fn ($link) => request()->routeIs($link['route']));
-    $ordersActive = collect($orderLinks)->contains(fn ($link) => request()->routeIs($link['route']));
 @endphp
 
 @if($isFloor)
@@ -73,13 +70,51 @@
             WolfCash
         </a>
 
-        <a
-            href="{{ route('dashboard') }}"
-            class="rounded-full border border-line px-3 py-1.5 text-xs font-medium text-dim transition hover:border-accent hover:text-accent"
-        >
-            Verlassen
-        </a>
+        <div class="flex items-center gap-2">
+            <button
+                type="button"
+                id="theme-toggle"
+                aria-label="Tag/Nacht-Ansicht umschalten"
+                class="flex h-8 w-8 items-center justify-center rounded-full border border-line text-dim transition hover:border-accent hover:text-accent"
+            >
+                <span id="theme-toggle-icon">🌙</span>
+            </button>
+
+            <a
+                href="{{ route('dashboard') }}"
+                class="rounded-full border border-line px-3 py-1.5 text-xs font-medium text-dim transition hover:border-accent hover:text-accent"
+            >
+                Verlassen
+            </a>
+        </div>
     </header>
+
+    <script>
+        (function () {
+            const button = document.getElementById('theme-toggle');
+            const icon = document.getElementById('theme-toggle-icon');
+
+            function isDark() {
+                return document.documentElement.classList.contains('dark');
+            }
+
+            function syncIcon() {
+                icon.textContent = isDark() ? '🌙' : '☀️';
+            }
+
+            syncIcon();
+
+            button.addEventListener('click', function () {
+                document.documentElement.classList.toggle('dark');
+
+                const theme = isDark() ? 'dark' : 'light';
+
+                document.cookie = 'wolfcash_theme=' + theme + '; max-age=' + (60 * 60 * 24 * 365) + '; path=/';
+
+                syncIcon();
+            });
+        })();
+    </script>
 
     <main>
         {{ $slot }}
@@ -87,152 +122,125 @@
 
 @else
 
-    {{-- Backoffice-Navigation --}}
-    <header x-data="{ open: false }" class="sticky top-0 z-40 border-b border-line/70 bg-surface/90 backdrop-blur">
-        <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+    {{-- Backoffice: Sidebar links, Einstellungen unten links (Starterkit-Layout) --}}
+    <div x-data="{ sidebarOpen: false }" class="lg:flex lg:min-h-screen">
+
+        {{-- Mobile Topbar --}}
+        <div class="sticky top-0 z-40 flex items-center justify-between border-b border-line/70 bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
             <a href="{{ route('dashboard') }}" class="flex items-center gap-2 font-display text-lg font-semibold tracking-tight text-fg">
                 <span class="inline-block h-2.5 w-2.5 rounded-full bg-accent"></span>
                 WolfCash
             </a>
 
-            <nav class="hidden items-center gap-1 lg:flex">
-                @foreach($primaryLinks as $link)
-                    <a
-                        href="{{ route($link['route']) }}"
-                        class="rounded-full px-3 py-1.5 text-sm font-medium transition
-                            {{ request()->routeIs($link['route']) ? 'bg-accent text-accent-ink' : 'text-dim hover:bg-surface-2 hover:text-fg' }}"
-                    >
-                        {{ $link['label'] }}
-                    </a>
-                @endforeach
-
-                    {{-- Bestellungen-Dropdown --}}
-                    <div class="relative" x-data="{ orderOpen: false }" @click.outside="ordersOpen = false" @keydown.escape.window="ordersOpen = false">
-                        <button
-                            type="button"
-                            @click="orderOpen = !orderOpen"
-                            class="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition
-                            {{ $ordersActive ? 'bg-accent text-accent-ink' : 'text-dim hover:bg-surface-2 hover:text-fg' }}"
-                        >
-                            Bestellungen
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 transition-transform" :class="orderOpen ? '-rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-
-                        <div
-                            x-show="orderOpen"
-                            x-transition:enter="transition ease-out duration-150"
-                            x-transition:enter-start="opacity-0 -translate-y-1"
-                            x-transition:enter-end="opacity-100 translate-y-0"
-                            x-transition:leave="transition ease-in duration-100"
-                            x-transition:leave-start="opacity-100"
-                            x-transition:leave-end="opacity-0"
-                            x-cloak
-                            class="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-line bg-surface-2 p-1.5 shadow-xl"
-                        >
-                            @foreach($orderLinks as $link)
-                                <a
-                                    href="{{ route($link['route']) }}"
-                                    @click="orderOpen = false"
-                                    class="block rounded-lg px-3 py-2 text-sm font-medium transition
-                                    {{ request()->routeIs($link['route']) ? 'bg-accent text-accent-ink' : 'text-dim hover:bg-surface hover:text-fg' }}"
-                                >
-                                    {{ $link['label'] }}
-                                </a>
-                            @endforeach
-                        </div>
-                    </div>
-
-                {{-- Einstellungen-Dropdown --}}
-                <div class="relative" x-data="{ settingsOpen: false }" @click.outside="settingsOpen = false" @keydown.escape.window="settingsOpen = false">
-                    <button
-                        type="button"
-                        @click="settingsOpen = !settingsOpen"
-                        class="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition
-                            {{ $settingsActive ? 'bg-accent text-accent-ink' : 'text-dim hover:bg-surface-2 hover:text-fg' }}"
-                    >
-                        Einstellungen
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 transition-transform" :class="settingsOpen ? '-rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-
-                    <div
-                        x-show="settingsOpen"
-                        x-transition:enter="transition ease-out duration-150"
-                        x-transition:enter-start="opacity-0 -translate-y-1"
-                        x-transition:enter-end="opacity-100 translate-y-0"
-                        x-transition:leave="transition ease-in duration-100"
-                        x-transition:leave-start="opacity-100"
-                        x-transition:leave-end="opacity-0"
-                        x-cloak
-                        class="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-line bg-surface-2 p-1.5 shadow-xl"
-                    >
-                        @foreach($settingsLinks as $link)
-                            <a
-                                href="{{ route($link['route']) }}"
-                                @click="settingsOpen = false"
-                                class="block rounded-lg px-3 py-2 text-sm font-medium transition
-                                    {{ request()->routeIs($link['route']) ? 'bg-accent text-accent-ink' : 'text-dim hover:bg-surface hover:text-fg' }}"
-                            >
-                                {{ $link['label'] }}
-                            </a>
-                        @endforeach
-                    </div>
-                </div>
-
-                <a href="{{ route('pos.index') }}" class="ml-2 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-ink transition hover:bg-accent-strong" >
-                    Kasse öffnen
-                </a>
-            </nav>
-
-            <button @click="open = !open" class="rounded-lg p-2 text-dim hover:text-fg lg:hidden" aria-label="Menü öffnen" >
-                <svg x-show="!open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+            <button @click="sidebarOpen = true" class="rounded-lg p-2 text-dim hover:text-fg" aria-label="Menü öffnen">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-                <svg x-show="open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
         </div>
 
-        <nav x-show="open" x-transition x-cloak class="flex flex-col gap-1 border-t border-line/70 px-4 py-3 lg:hidden" >
-            @foreach($primaryLinks as $link)
-                <a
-                    href="{{ route($link['route']) }}"
-                    class="rounded-lg px-3 py-2 text-sm font-medium
-                        {{ request()->routeIs($link['route']) ? 'bg-accent text-accent-ink' : 'text-dim hover:bg-surface-2 hover:text-fg' }}"
-                >
-                    {{ $link['label'] }}
+        {{-- Mobiler Hintergrund --}}
+        <div
+            x-show="sidebarOpen"
+            x-cloak
+            x-transition:enter="transition-opacity ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition-opacity ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="fixed inset-0 z-40 bg-black/60 lg:hidden"
+            @click="sidebarOpen = false"
+        ></div>
+
+        {{-- Sidebar --}}
+        {{--
+            Bewusst per Klassen-Transform statt x-show gesteuert: Alpines
+            x-show setzt ein inline "display:none", das jede responsive
+            Tailwind-Klasse (z. B. lg:flex) übersticht und die Sidebar auf
+            großen Bildschirmen unsichtbar machen würde, bis einmal manuell
+            getoggelt wurde. Reine Klassen lassen sich per lg:-Variante
+            zuverlässig überschreiben.
+        --}}
+        <aside
+            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+            class="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-line/70 bg-surface transition-transform duration-200 lg:sticky lg:top-0 lg:z-0 lg:h-screen lg:translate-x-0 lg:transition-none"
+        >
+            <div class="flex shrink-0 items-center justify-between px-5 py-4">
+                <a href="{{ route('dashboard') }}" class="flex items-center gap-2 font-display text-lg font-semibold tracking-tight text-fg">
+                    <span class="inline-block h-2.5 w-2.5 rounded-full bg-accent"></span>
+                    WolfCash
                 </a>
-            @endforeach
 
-            <p class="mb-1 mt-3 px-3 text-xs font-semibold uppercase tracking-wide text-dim">Einstellungen</p>
+                <button @click="sidebarOpen = false" class="text-dim lg:hidden" aria-label="Menü schließen">
+                    <flux:icon.x-mark class="size-5" />
+                </button>
+            </div>
 
-            @foreach($settingsLinks as $link)
-                <a
-                    href="{{ route($link['route']) }}"
-                    class="rounded-lg px-3 py-2 text-sm font-medium
-                        {{ request()->routeIs($link['route']) ? 'bg-accent text-accent-ink' : 'text-dim hover:bg-surface-2 hover:text-fg' }}"
-                >
-                    {{ $link['label'] }}
-                </a>
-            @endforeach
+            <nav class="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+                @foreach($navGroups as $group)
 
-            <a href="{{ route('pos.index') }}" class="mt-3 rounded-lg bg-accent px-3 py-2 text-center text-sm font-semibold text-accent-ink">
-                Kasse öffnen
-            </a>
-        </nav>
-    </header>
+                    @if(! $loop->first)
+                        <flux:separator class="my-3" />
+                    @endif
 
-    <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        {{ $slot }}
-    </main>
+                    @if(isset($group['title']))
+                        <p class="mb-1 mt-2 px-3 text-xs font-semibold uppercase tracking-wide text-dim">
+                            {{ $group['title'] }}
+                        </p>
+                    @endif
+
+                    @foreach($group['items'] as $link)
+                        <a
+                            href="{{ route($link['route']) }}"
+                            class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition
+                                {{ ($link['danger'] ?? false)
+                                    ? (request()->routeIs($link['route']) ? 'bg-occupied/15 text-occupied' : 'text-occupied/80 hover:bg-occupied/10 hover:text-occupied')
+                                    : (request()->routeIs($link['route']) ? 'bg-accent text-accent-ink' : 'text-dim hover:bg-surface-2 hover:text-fg') }}"
+                        >
+                            <flux:icon :icon="$link['icon']" class="size-4.5 shrink-0" />
+                            {{ $link['label'] }}
+                        </a>
+                    @endforeach
+
+                @endforeach
+            </nav>
+
+            {{-- Fuß: Einstellungen unten links --}}
+            <div class="shrink-0 border-t border-line/70 p-3">
+                <flux:dropdown position="top" align="start" class="w-full">
+                    <button
+                        type="button"
+                        class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition
+                            {{ request()->routeIs('admin.settings') ? 'bg-accent text-accent-ink' : 'text-dim hover:bg-surface-2 hover:text-fg' }}"
+                    >
+                        <flux:icon.cog-6-tooth class="size-4.5 shrink-0" />
+                        Einstellungen
+                    </button>
+
+                    <flux:menu>
+                        <flux:menu.item href="{{ route('admin.settings') }}" icon="cog-6-tooth">
+                            Allgemeine Einstellungen
+                        </flux:menu.item>
+                        <flux:menu.separator />
+                        <flux:menu.item href="{{ route('pos.index') }}" icon="shopping-cart">
+                            Kasse öffnen
+                        </flux:menu.item>
+                    </flux:menu>
+                </flux:dropdown>
+            </div>
+        </aside>
+
+        <main class="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+            {{ $slot }}
+        </main>
+
+    </div>
 
 @endif
 
 @livewireScripts
+@fluxScripts
 
 @if($isFloor)
     <script>

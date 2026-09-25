@@ -1,11 +1,15 @@
-@import 'tailwindcss';
 @import url('https://fonts.bunny.net/css?family=inter:400,500,600,700|space-grotesk:500,600,700');
+@import 'tailwindcss';
+@import '../../vendor/livewire/flux/dist/flux.css';
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 @source '../views/**/*.blade.php';
 @source '../js/**/*.js';
 @source '../../app/**/*.php';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../vendor/livewire/flux/stubs/**/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
 @theme {
@@ -31,6 +35,31 @@
     --color-free-soft: #16261e;
     --color-occupied: #e2555f;
     --color-occupied-soft: #2b1a1b;
+}
+
+/*
+ * Day Service Palette — überschreibt dieselben Variablen, sobald
+ * die "dark"-Klasse am <html>-Element fehlt (siehe Day/Night-Umschaltung
+ * im Kellner-Header).
+ */
+html:not(.dark) {
+    --color-ink: #faf7f0;
+    --color-ink-soft: #f3efe2;
+    --color-surface: #ffffff;
+    --color-surface-2: #f1ece0;
+    --color-line: #ddd4c0;
+
+    --color-fg: #241f16;
+    --color-dim: #7a7160;
+
+    --color-accent: #b5761f;
+    --color-accent-strong: #96601a;
+    --color-accent-ink: #fff8ec;
+
+    --color-free: #1f8a4c;
+    --color-free-soft: #e3f5ea;
+    --color-occupied: #c62a35;
+    --color-occupied-soft: #fbe4e5;
 }
 
 @layer base {
