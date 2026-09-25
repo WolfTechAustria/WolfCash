@@ -20,6 +20,7 @@ class OrderService
         ?PrintService $printService = null,
         bool $forceNewOrder = false,
         string $source = Order::SOURCE_POS,
+        ?\Closure $onOrderCreated = null,
     ): Order {
         $this->dailyClosingService->assertOpen(
             today()
@@ -30,7 +31,8 @@ class OrderService
             $cart,
             $printService,
             $forceNewOrder,
-            $source
+            $source,
+            $onOrderCreated
         ): Order {
             $table = Table::findOrFail(
                 $tableId
@@ -142,6 +144,18 @@ class OrderService
                         $order,
                         $createdItems
                     );
+            }
+
+            /*
+             * Alternativer Druckweg für Bestellquellen, die keinen
+             * Produktionsbon an den Stationen wollen (z. B. stationäre
+             * Selbstbedienungskassen), sondern ein eigenes Ticket.
+             */
+            if (
+                $onOrderCreated
+                && $createdItems !== []
+            ) {
+                $onOrderCreated($order, $createdItems);
             }
 
             return $order->fresh([

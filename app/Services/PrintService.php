@@ -95,4 +95,55 @@ class PrintService
 
         }
     }
+
+    /**
+     * Erzeugt für eine stationäre Selbstbedienungskasse einen
+     * Bestellbon auf dem fest konfigurierten Selbstbedienungs-Drucker,
+     * statt Produktionsbons an die Stationsdrucker zu senden.
+     *
+     * @param array<int, \App\Models\OrderItem> $orderItems
+     */
+    public function createStationaryOrderJob(
+        Order $order,
+        array $orderItems,
+        bool $printIndividually = false
+    ): void {
+        $items = [];
+
+        foreach ($orderItems as $orderItem) {
+            $product = $orderItem->product;
+
+            $items[] = [
+                'order_item_id' => $orderItem->id,
+                'product_id' => $orderItem->product_id,
+                'name' => $product?->name ?? 'Unbekanntes Produkt',
+                'quantity' => $orderItem->quantity,
+                'note' => $orderItem->note,
+            ];
+        }
+
+        if ($items === []) {
+            return;
+        }
+
+        $printerId = (int) config('printing.stationary_order_printer_id', 0);
+
+        $printJob = PrintJob::create([
+            'order_id' => $order->id,
+            'printer_id' => $printerId > 0 ? $printerId : null,
+            'production_station_id' => null,
+            'type' => PrintJob::TYPE_STATIONARY_ORDER,
+            'status' => PrintJob::STATUS_PENDING,
+            'ready_to_print' => true,
+            'payload' => [
+                'order_id' => $order->id,
+                'table' => $order->table?->number,
+                'items' => $items,
+                'print_individually' => $printIndividually,
+            ],
+        ]);
+
+        ProcessPrintJob::dispatch($printJob->id)
+            ->afterCommit();
+    }
 }

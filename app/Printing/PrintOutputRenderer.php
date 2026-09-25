@@ -223,6 +223,31 @@ class PrintOutputRenderer
             str_repeat('-', 32),
         ];
 
+        $invoiceRecipient = $payload['invoice_recipient'] ?? null;
+
+        if (! empty($invoiceRecipient)) {
+            $lines[] = 'Rechnungsempfänger:';
+
+            if (! empty($invoiceRecipient['name'])) {
+                $lines[] = $invoiceRecipient['name'];
+            }
+
+            if (! empty($invoiceRecipient['address'])) {
+                foreach (
+                    preg_split('/\r\n|\r|\n/', (string) $invoiceRecipient['address'])
+                    as $addressLine
+                ) {
+                    $lines[] = $addressLine;
+                }
+            }
+
+            if (! empty($invoiceRecipient['vat_id'])) {
+                $lines[] = 'UID: '.$invoiceRecipient['vat_id'];
+            }
+
+            $lines[] = str_repeat('-', 32);
+        }
+
         foreach ($items as $item) {
             $quantity = max(
                 1,

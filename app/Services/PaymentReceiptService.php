@@ -65,6 +65,12 @@ class PaymentReceiptService
 
         $order->loadMissing('table');
 
+        $invoiceRecipient = array_filter([
+            'name' => $payment->invoice_recipient_name,
+            'address' => $payment->invoice_recipient_address,
+            'vat_id' => $payment->invoice_recipient_vat_id,
+        ]);
+
         $payload = [
             'version' => 1,
 
@@ -95,6 +101,11 @@ class PaymentReceiptService
              * veränderten OrderItems rekonstruiert.
              */
             'items' => array_values($items),
+
+            'invoice_recipient' =>
+                $invoiceRecipient !== []
+                    ? $invoiceRecipient
+                    : null,
 
             'automatic_print_suppressed' =>
                 ! $automaticPrintingEnabled,

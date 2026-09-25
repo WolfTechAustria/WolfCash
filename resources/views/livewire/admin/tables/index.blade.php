@@ -171,6 +171,15 @@
             >
         </div>
 
+        <label class="flex items-center gap-2 pb-2 text-sm text-dim">
+            <input
+                type="checkbox"
+                wire:model="isStationary"
+                class="h-4 w-4 rounded border-line"
+            >
+            Stationäre Kasse
+        </label>
+
         <button type="submit" class="rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-accent-ink transition hover:bg-accent-strong">
             Tisch anlegen
         </button>
@@ -201,6 +210,7 @@
                 <th class="px-4 py-3 text-left font-medium">Name</th>
                 <th class="px-4 py-3 text-left font-medium">Status</th>
                 <th class="px-4 py-3 text-left font-medium">Self Ordering</th>
+                <th class="px-4 py-3 text-left font-medium">Stationäre Kasse</th>
                 <th class="px-4 py-3 text-right font-medium">Aktion</th>
             </tr>
             </thead>
@@ -258,6 +268,37 @@
                         </div>
 
                     </td>
+                    <td class="px-4 py-3">
+
+                        <button
+                            type="button"
+                            wire:click="toggleStationary({{ $table->id }})"
+
+                            class="rounded-full px-3 py-1 text-xs font-medium transition
+                {{
+                    $table->is_stationary
+                        ? 'bg-free/15 text-free'
+                        : 'bg-surface-2 text-dim'
+                }}"
+                        >
+                            {{
+                                $table->is_stationary
+                                    ? 'Stationär aktiv'
+                                    : 'Stationär aus'
+                            }}
+                        </button>
+
+                        @if($table->is_stationary)
+                            <a
+                                href="{{ route('pos.stationary', $table, false) }}"
+                                target="_blank"
+                                class="mt-2 block text-xs font-medium text-accent underline"
+                            >
+                                Kasse öffnen
+                            </a>
+                        @endif
+
+                    </td>
                     <td class="px-4 py-3 text-right">
                         <button
                             wire:click="delete({{ $table->id }})"
@@ -282,7 +323,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="4" class="px-4 py-8 text-center text-dim">Noch keine Tische angelegt.</td>
+                    <td colspan="6" class="px-4 py-8 text-center text-dim">Noch keine Tische angelegt.</td>
                 </tr>
             @endforelse
             </tbody>

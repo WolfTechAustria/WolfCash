@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Admin\Devices\Index as DevicesIndex;
 use App\Livewire\Pos\Index as PosIndex;
+use App\Livewire\Pos\StationaryIndex;
 use App\Livewire\Admin\Tables\Index as TablesIndex;
 use App\Livewire\Admin\Products\Index as ProductsIndex;
 use App\Livewire\Admin\ProductGroups\Index as ProductGroupsIndex;
@@ -64,6 +65,9 @@ Route::view('/login', 'auth.login')->name('login');
 
 Route::get('/pos', PosIndex::class)
     ->name('pos.index');
+
+Route::get('/pos/stationary/{table}', StationaryIndex::class)
+    ->name('pos.stationary');
 
 Route::get('/pos/checkout/{table}', Checkout::class)
     ->name('pos.checkout');

@@ -12,6 +12,8 @@ class PrintJob extends Model
 
     public const TYPE_RECEIPT = 'receipt';
 
+    public const TYPE_STATIONARY_ORDER = 'stationary_order';
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_PRINTING = 'printing';

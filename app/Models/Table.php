@@ -14,12 +14,14 @@ class Table extends Model
         'name',
         'status',
         'self_order_enabled',
+        'is_stationary',
     ];
 
     protected function casts(): array
     {
         return [
             'self_order_enabled' => 'boolean',
+            'is_stationary' => 'boolean',
         ];
     }
 

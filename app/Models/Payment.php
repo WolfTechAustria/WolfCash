@@ -25,6 +25,9 @@ class Payment extends Model
         'payment_method',
         'device_id',
         'user_id',
+        'invoice_recipient_name',
+        'invoice_recipient_address',
+        'invoice_recipient_vat_id',
     ];
 
     protected function casts(): array

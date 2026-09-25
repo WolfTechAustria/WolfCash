@@ -17,6 +17,8 @@ class Order extends Model
 
     public const SOURCE_SELF_ORDER = 'self_order';
 
+    public const SOURCE_STATIONARY = 'stationary';
+
     public const STATUS_OPEN = 'open';
     public const STATUS_SENT = 'sent';
     public const STATUS_PAID = 'paid';

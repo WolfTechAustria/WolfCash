@@ -10,6 +10,7 @@ class Index extends Component
 {
     public string $number = '';
     public string $name = '';
+    public bool $isStationary = false;
 
     public ?int $qrTableId = null;
 
@@ -107,6 +108,19 @@ class Index extends Component
         ]);
     }
 
+    public function toggleStationary(
+        int $tableId
+    ): void {
+        $table = Table::findOrFail(
+            $tableId
+        );
+
+        $table->update([
+            'is_stationary' =>
+                ! $table->is_stationary,
+        ]);
+    }
+
     public function save()
     {
         $this->validate();
@@ -116,11 +130,13 @@ class Index extends Component
             'name' => $this->name,
             'status' => 'free',
             'self_order_enabled' => true,
+            'is_stationary' => $this->isStationary,
         ]);
 
         $this->reset([
             'number',
             'name',
+            'isStationary',
         ]);
     }
 

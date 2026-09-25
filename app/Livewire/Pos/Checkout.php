@@ -5,10 +5,12 @@ namespace App\Livewire\Pos;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Table;
+use App\Services\PaymentReceiptService;
 use App\Services\PaymentService;
 use Illuminate\Support\Collection;
 use Livewire\Component;
 use Livewire\Attributes\On;
+use Throwable;
 
 class Checkout extends Component
 {
@@ -32,6 +34,14 @@ class Checkout extends Component
     public ?float $pendingCardAmount = null;
 
     public ?string $pendingCardMode = null;
+
+    public string $invoiceRecipientName = '';
+
+    public string $invoiceRecipientAddress = '';
+
+    public string $invoiceRecipientVatId = '';
+
+    public ?int $printingReceiptPaymentId = null;
 
     public function mount(Table $table): void
     {
@@ -167,7 +177,8 @@ class Checkout extends Component
         $payment = $paymentService->paySelection(
             $this->order,
             $this->selectedForPayment,
-            $method
+            $method,
+            $this->invoiceRecipientPayload()
         );
 
         if (! $payment) {
@@ -202,7 +213,8 @@ class Checkout extends Component
 
         $payment = $paymentService->payRemaining(
             $this->order,
-            $method
+            $method,
+            $this->invoiceRecipientPayload()
         );
 
         if (! $payment) {
@@ -221,6 +233,54 @@ class Checkout extends Component
         $this->loadOrder();
 
         $this->closeOrderIfFullyPaid();
+    }
+
+    /**
+     * Druckt den Zahlungsbeleg für eine bereits erfasste Zahlung
+     * sofort aus, unabhängig davon, ob der automatische Belegdruck
+     * global deaktiviert ist. Damit muss dafür nicht erst die
+     * Admin-Oberfläche geöffnet werden.
+     */
+    public function printReceipt(
+        int $paymentId,
+        PaymentReceiptService $receiptService
+    ): void {
+        $this->resetErrorBag('receiptPrint');
+
+        $payment = $this->order?->payments
+            ->firstWhere('id', $paymentId);
+
+        if (! $payment) {
+            $this->addError(
+                'receiptPrint',
+                'Die ausgewählte Zahlung gehört nicht zu dieser Bestellung.'
+            );
+
+            return;
+        }
+
+        $this->printingReceiptPaymentId = $payment->id;
+
+        try {
+            $output = $receiptService->reprint($payment);
+
+            $isCopy = (bool) data_get($output->payload, 'is_copy', false);
+
+            session()->flash(
+                'success',
+                ($isCopy ? 'Die Belegkopie' : 'Der Zahlungsbeleg')
+                .' wurde an die Druckwarteschlange übergeben.'
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            $this->addError(
+                'receiptPrint',
+                $exception->getMessage()
+            );
+        } finally {
+            $this->printingReceiptPaymentId = null;
+        }
     }
 
     public function getTotalAmountProperty(): float
@@ -268,6 +328,26 @@ class Checkout extends Component
                 2
             )
         );
+    }
+
+    /**
+     * @return array{name: ?string, address: ?string, vat_id: ?string}|null
+     */
+    private function invoiceRecipientPayload(): ?array
+    {
+        $name = trim($this->invoiceRecipientName) ?: null;
+        $address = trim($this->invoiceRecipientAddress) ?: null;
+        $vatId = trim($this->invoiceRecipientVatId) ?: null;
+
+        if ($name === null && $address === null && $vatId === null) {
+            return null;
+        }
+
+        return [
+            'name' => $name,
+            'address' => $address,
+            'vat_id' => $vatId,
+        ];
     }
 
     private function sanitizeSelection(): void

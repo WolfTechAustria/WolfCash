@@ -20,18 +20,21 @@ class PaymentService
      * einen Zahlungsdatensatz samt Kundenbeleg.
      *
      * @param array<int|string, int> $selectedForPayment
+     * @param array{name: ?string, address: ?string, vat_id: ?string}|null $invoiceRecipient
      */
     public function paySelection(
         Order $order,
         array $selectedForPayment,
-        string $method
+        string $method,
+        ?array $invoiceRecipient = null
     ): ?Payment {
         $this->dailyClosingService->assertOpen(today());
 
         return DB::transaction(function () use (
             $order,
             $selectedForPayment,
-            $method
+            $method,
+            $invoiceRecipient
         ): ?Payment {
             $amount = 0.0;
             $receiptItems = [];
@@ -147,6 +150,9 @@ class PaymentService
                 'amount' => round($amount, 2),
                 'payment_method' => $method,
                 'user_id' => auth()->id(),
+                'invoice_recipient_name' => $invoiceRecipient['name'] ?? null,
+                'invoice_recipient_address' => $invoiceRecipient['address'] ?? null,
+                'invoice_recipient_vat_id' => $invoiceRecipient['vat_id'] ?? null,
             ]);
 
             $this->paymentReceiptService->createAndDispatch(
@@ -162,16 +168,20 @@ class PaymentService
     /**
      * Bezahlt sämtliche noch offenen Positionen und erstellt
      * einen Beleg mit genau diesen Positionen.
+     *
+     * @param array{name: ?string, address: ?string, vat_id: ?string}|null $invoiceRecipient
      */
     public function payRemaining(
         Order $order,
-        string $method
+        string $method,
+        ?array $invoiceRecipient = null
     ): ?Payment {
         $this->dailyClosingService->assertOpen(today());
 
         return DB::transaction(function () use (
             $order,
-            $method
+            $method,
+            $invoiceRecipient
         ): ?Payment {
             $openItems = $order->items()
                 ->with('product')
@@ -222,6 +232,9 @@ class PaymentService
                 'amount' => round($amount, 2),
                 'payment_method' => $method,
                 'user_id' => auth()->id(),
+                'invoice_recipient_name' => $invoiceRecipient['name'] ?? null,
+                'invoice_recipient_address' => $invoiceRecipient['address'] ?? null,
+                'invoice_recipient_vat_id' => $invoiceRecipient['vat_id'] ?? null,
             ]);
 
             $this->paymentReceiptService->createAndDispatch(

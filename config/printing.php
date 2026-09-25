@@ -34,6 +34,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Drucker für Bestellbons an stationären Selbstbedienungskassen
+    |--------------------------------------------------------------------------
+    |
+    | ID des Druckers aus der Tabelle printers. Bestellungen von Tischen mit
+    | is_stationary=true werden ausschließlich auf diesem Drucker ausgegeben,
+    | unabhängig von der pro Produktkategorie konfigurierten Station.
+    |
+    */
+
+    'stationary_order_printer_id' => env(
+        'PRINT_STATIONARY_PRINTER_ID',
+        0
+    ),
+
+
+    /*
+    |--------------------------------------------------------------------------
     | Netzwerk-Timeout
     |--------------------------------------------------------------------------
     */

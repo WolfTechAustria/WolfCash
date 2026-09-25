@@ -2,11 +2,9 @@
 
 namespace App\Livewire\Pos;
 
+use App\Livewire\Pos\Concerns\ManagesProductCart;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Product;
-use App\Models\ProductCategory;
-use App\Models\ProductGroup;
 use App\Models\Table;
 use App\Services\OrderCancellationService;
 use App\Services\OrderService;
@@ -17,15 +15,9 @@ use Throwable;
 
 class Index extends Component
 {
+    use ManagesProductCart;
+
     public ?int $selectedTable = null;
-
-    public array $cart = [];
-
-    public array $orderItems = [];
-
-    public ?int $activeGroup = null;
-
-    public ?int $activeCategory = null;
 
     public string $tableSelectionMode = 'keypad';
 
@@ -50,6 +42,15 @@ class Index extends Component
     public int $cancellationQuantity = 1;
 
     public string $cancellationReason = '';
+
+    public function mount(): void
+    {
+        $storedMode = request()->cookie('wolfcash_table_selection_mode');
+
+        if (in_array($storedMode, ['keypad', 'list'], true)) {
+            $this->tableSelectionMode = $storedMode;
+        }
+    }
 
     public function selectTable(int $tableId): void
     {
@@ -108,6 +109,16 @@ class Index extends Component
         }
 
         $this->tableSelectionMode = $mode;
+
+        /*
+         * Bleibt für dieses Gerät/Browser dauerhaft bestehen,
+         * statt bei jedem Bestellvorgang auf den Default zurückzufallen.
+         */
+        cookie()->queue(cookie(
+            'wolfcash_table_selection_mode',
+            $mode,
+            60 * 24 * 365
+        ));
     }
 
     public function pressTableNumber(string $number): void
@@ -163,64 +174,6 @@ class Index extends Component
         $this->tableNumberInput = '';
     }
 
-    public function setGroup(int $groupId): void
-    {
-        $this->activeGroup = $groupId;
-
-        $this->activeCategory = ProductCategory::query()
-            ->where('product_group_id', $groupId)
-            ->value('id');
-    }
-
-    public function setCategory(int $categoryId): void
-    {
-        $this->activeCategory = $categoryId;
-    }
-
-    public function addProduct(int $productId): void
-    {
-        $product = Product::query()
-            ->findOrFail($productId);
-
-        if ($product->isSoldOut()) {
-            return;
-        }
-
-        if (! isset($this->cart[$productId])) {
-            $this->cart[$productId] = [
-                'id' => $product->id,
-                'name' => $product->name,
-                'price' => $product->price,
-                'quantity' => 0,
-                'note' => '',
-            ];
-        }
-
-        $this->cart[$productId]['quantity']++;
-    }
-
-    public function removeProduct(int $productId): void
-    {
-        if (! isset($this->cart[$productId])) {
-            return;
-        }
-
-        $this->cart[$productId]['quantity']--;
-
-        if ($this->cart[$productId]['quantity'] <= 0) {
-            unset($this->cart[$productId]);
-        }
-    }
-
-    public function increaseProduct(int $productId): void
-    {
-        if (! isset($this->cart[$productId])) {
-            return;
-        }
-
-        $this->cart[$productId]['quantity']++;
-    }
-
     public function bonieren(
         OrderService $orderService,
         PrintService $printService
@@ -252,31 +205,6 @@ class Index extends Component
          * Auf mobilen Geräten nach erfolgreicher Bonierung schließen.
          */
         $this->cartOpen = false;
-    }
-
-    public function getTotalProperty(): float
-    {
-        $total = 0.0;
-
-        /*
-         * Bereits bonierte, nicht stornierte Positionen.
-         */
-        foreach ($this->orderItems as $item) {
-            $total +=
-                (float) $item['price']
-                * (int) $item['open_quantity'];
-        }
-
-        /*
-         * Noch nicht bonierte Warenkorbpositionen.
-         */
-        foreach ($this->cart as $item) {
-            $total +=
-                (float) $item['price']
-                * (int) $item['quantity'];
-        }
-
-        return round($total, 2);
     }
 
     public function openCancellationModal(int $itemId): void
@@ -457,63 +385,19 @@ class Index extends Component
 
     public function render()
     {
-        if (! $this->activeGroup) {
-            $firstGroup = ProductGroup::query()
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->first();
+        return view('livewire.pos.index', array_merge(
+            [
+                'tables' => Table::query()
+                    ->where('is_stationary', false)
+                    ->with('openOrder')
+                    ->orderBy('number')
+                    ->get(),
 
-            if ($firstGroup) {
-                $this->activeGroup = $firstGroup->id;
-
-                $this->activeCategory = ProductCategory::query()
-                    ->where(
-                        'product_group_id',
-                        $firstGroup->id
-                    )
-                    ->orderBy('sort_order')
-                    ->orderBy('name')
-                    ->value('id');
-            }
-        }
-
-        return view('livewire.pos.index', [
-            'tables' => Table::query()
-                ->with('openOrder')
-                ->orderBy('number')
-                ->get(),
-
-            'table' => $this->selectedTable
-                ? Table::query()->find($this->selectedTable)
-                : null,
-
-            'groups' => ProductGroup::query()
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(),
-
-            'categories' => $this->activeGroup
-                ? ProductCategory::query()
-                    ->where(
-                        'product_group_id',
-                        $this->activeGroup
-                    )
-                    ->orderBy('sort_order')
-                    ->orderBy('name')
-                    ->get()
-                : collect(),
-
-            'products' => $this->activeCategory
-                ? Product::query()
-                    ->where(
-                        'product_category_id',
-                        $this->activeCategory
-                    )
-                    ->where('is_active', true)
-                    ->orderBy('sort_order')
-                    ->orderBy('name')
-                    ->get()
-                : collect(),
-        ])->layout('components.layouts.app');
+                'table' => $this->selectedTable
+                    ? Table::query()->find($this->selectedTable)
+                    : null,
+            ],
+            $this->loadProductCatalog()
+        ))->layout('components.layouts.app');
     }
 }

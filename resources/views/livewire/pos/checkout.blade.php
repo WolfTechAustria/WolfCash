@@ -1,5 +1,11 @@
 <div class="mx-auto max-w-3xl px-4 pb-10 pt-4 sm:px-6">
 
+    @if(session('success'))
+        <div class="mb-4 rounded-lg border border-free/40 bg-free-soft px-4 py-2.5 text-sm text-free">
+            {{ session('success') }}
+        </div>
+    @endif
+
     @if($paymentFinished)
 
         <div class="flex flex-col items-center gap-3 rounded-3xl border border-free/40 bg-free-soft px-6 py-12 text-center">
@@ -21,13 +27,22 @@
                 </div>
             @endif
 
+            @error('receiptPrint')
+            <p class="text-sm text-occupied">{{ $message }}</p>
+            @enderror
+
             <div class="mt-6 flex w-full max-w-xs flex-col gap-2">
-                <button
-                    disabled
-                    class="w-full cursor-not-allowed rounded-xl border border-line py-3 text-sm font-medium text-dim opacity-60"
-                >
-                    Beleg drucken
-                </button>
+                @if($lastPayment)
+                    <button
+                        type="button"
+                        wire:click="printReceipt({{ $lastPayment->id }})"
+                        wire:loading.attr="disabled"
+                        wire:target="printReceipt({{ $lastPayment->id }})"
+                        class="w-full rounded-xl border border-line py-3 text-sm font-medium text-dim transition hover:border-accent hover:text-accent disabled:opacity-60"
+                    >
+                        Zahlungsbeleg drucken
+                    </button>
+                @endif
 
                 <button
                     wire:click="backToPos"
@@ -172,6 +187,12 @@
             {{-- Zahlungen-Verlauf --}}
             <h2 class="mb-2 text-xs font-semibold uppercase tracking-wide text-dim">Zahlungen</h2>
 
+            @error('receiptPrint')
+            <div class="mb-3 rounded-lg bg-occupied-soft px-3 py-2 text-sm text-occupied">
+                {{ $message }}
+            </div>
+            @enderror
+
             @if($order->payments->isEmpty())
 
                 <p class="mb-5 text-sm text-dim">Noch keine Zahlungen.</p>
@@ -182,12 +203,57 @@
                     @foreach($order->payments as $payment)
                         <div class="flex items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm">
                             <span class="text-dim">{{ $payment->created_at->format('H:i') }} · {{ $payment->payment_method }}</span>
-                            <span class="font-medium tabular-nums">{{ number_format($payment->amount, 2) }} €</span>
+
+                            <div class="flex items-center gap-3">
+                                <span class="font-medium tabular-nums">{{ number_format($payment->amount, 2) }} €</span>
+
+                                <button
+                                    type="button"
+                                    wire:click="printReceipt({{ $payment->id }})"
+                                    wire:loading.attr="disabled"
+                                    wire:target="printReceipt({{ $payment->id }})"
+                                    class="rounded-full border border-line px-2.5 py-1 text-xs font-medium text-dim transition hover:border-accent hover:text-accent disabled:opacity-60"
+                                >
+                                    🖨 Beleg
+                                </button>
+                            </div>
                         </div>
                     @endforeach
                 </div>
 
             @endif
+
+            {{-- Rechnungsempfänger --}}
+            <details class="mb-5 rounded-xl border border-line bg-surface px-4 py-3">
+                <summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-dim">
+                    Rechnungsempfänger (optional)
+                </summary>
+
+                <div class="mt-3 flex flex-col gap-2.5">
+
+                    <input
+                        type="text"
+                        wire:model="invoiceRecipientName"
+                        placeholder="Name / Firma"
+                        class="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm focus:border-accent focus:outline-none"
+                    >
+
+                    <textarea
+                        wire:model="invoiceRecipientAddress"
+                        placeholder="Adresse (Straße, PLZ, Ort)"
+                        rows="2"
+                        class="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm focus:border-accent focus:outline-none"
+                    ></textarea>
+
+                    <input
+                        type="text"
+                        wire:model="invoiceRecipientVatId"
+                        placeholder="UID-Nummer"
+                        class="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm focus:border-accent focus:outline-none"
+                    >
+
+                </div>
+            </details>
 
             {{-- Zahlungs-Aktionen --}}
             <div class="grid grid-cols-2 gap-2.5">
