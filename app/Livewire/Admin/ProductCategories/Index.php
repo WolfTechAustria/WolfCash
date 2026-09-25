@@ -16,8 +16,9 @@ class Index extends Component
     public ?int $printer_id = null;
     public ?int $production_station_id = null;
 
-    public int $sort_order = 0;
     public ?int $editingId = null;
+
+    public ?int $filterGroupId = null;
 
     protected function rules(): array
     {
@@ -32,8 +33,6 @@ class Index extends Component
 
             'production_station_id'
             => 'nullable|exists:production_stations,id',
-
-            'sort_order' => 'required|integer|min:0',
         ];
     }
 
@@ -46,12 +45,14 @@ class Index extends Component
             'product_group_id' => $this->product_group_id,
             'printer_id' => $this->printer_id,
             'production_station_id' => $this->production_station_id,
-            'sort_order' => $this->sort_order,
         ];
 
         if ($this->editingId) {
             ProductCategory::findOrFail($this->editingId)->update($data);
         } else {
+            $data['sort_order'] = (int) ProductCategory::where('product_group_id', $this->product_group_id)
+                ->max('sort_order') + 1;
+
             ProductCategory::create($data);
         }
 
@@ -62,8 +63,6 @@ class Index extends Component
             'production_station_id',
             'editingId',
         ]);
-
-        $this->sort_order = 0;
     }
 
     public function edit(int $id): void
@@ -75,7 +74,16 @@ class Index extends Component
         $this->product_group_id = $category->product_group_id;
         $this->printer_id = $category->printer_id;
         $this->production_station_id = $category->production_station_id;
-        $this->sort_order = $category->sort_order;
+    }
+
+    /**
+     * @param array<int, int|string> $orderedIds
+     */
+    public function reorder(array $orderedIds): void
+    {
+        foreach ($orderedIds as $index => $id) {
+            ProductCategory::whereKey($id)->update(['sort_order' => $index]);
+        }
     }
 
     public function delete(int $id): void
@@ -96,6 +104,10 @@ class Index extends Component
             'livewire.admin.product-categories.index',
             [
                 'categories' => ProductCategory::with('group')
+                    ->when(
+                        $this->filterGroupId,
+                        fn ($query) => $query->where('product_group_id', $this->filterGroupId)
+                    )
                     ->orderBy('sort_order')
                     ->orderBy('name')
                     ->get(),

@@ -8,14 +8,12 @@ use App\Models\ProductGroup;
 class Index extends Component
 {
     public string $name = '';
-    public int $sort_order = 0;
     public ?int $editingId = null;
 
     protected function rules(): array
     {
         return [
             'name' => 'required|max:255',
-            'sort_order' => 'required|integer|min:0',
         ];
     }
 
@@ -23,19 +21,18 @@ class Index extends Component
     {
         $this->validate();
 
-        $data = [
-            'name' => $this->name,
-            'sort_order' => $this->sort_order,
-        ];
-
         if ($this->editingId) {
-            ProductGroup::findOrFail($this->editingId)->update($data);
+            ProductGroup::findOrFail($this->editingId)->update([
+                'name' => $this->name,
+            ]);
         } else {
-            ProductGroup::create($data);
+            ProductGroup::create([
+                'name' => $this->name,
+                'sort_order' => (int) ProductGroup::max('sort_order') + 1,
+            ]);
         }
 
         $this->reset(['name', 'editingId']);
-        $this->sort_order = 0;
     }
 
     public function edit(int $id): void
@@ -44,7 +41,16 @@ class Index extends Component
 
         $this->editingId = $group->id;
         $this->name = $group->name;
-        $this->sort_order = $group->sort_order;
+    }
+
+    /**
+     * @param array<int, int|string> $orderedIds
+     */
+    public function reorder(array $orderedIds): void
+    {
+        foreach ($orderedIds as $index => $id) {
+            ProductGroup::whereKey($id)->update(['sort_order' => $index]);
+        }
     }
 
     public function delete(int $id): void

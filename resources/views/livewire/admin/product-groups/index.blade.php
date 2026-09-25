@@ -23,15 +23,6 @@
             >
         </div>
 
-        <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-dim">Sortierung</label>
-            <input
-                type="number"
-                wire:model="sort_order"
-                class="w-24 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm focus:border-accent focus:outline-none"
-            >
-        </div>
-
         <button type="submit" class="rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-accent-ink transition hover:bg-accent-strong">
             Speichern
         </button>
@@ -44,20 +35,32 @@
     </div>
     @enderror
 
+    <p class="mb-2 text-xs text-dim">Reihenfolge per Ziehen am Griff (⠿) anpassen.</p>
+
     <div class="overflow-x-auto rounded-2xl border border-line">
         <table class="w-full text-sm">
             <thead class="bg-surface-2 text-xs uppercase tracking-wide text-dim">
             <tr>
+                <th class="w-10 px-4 py-3"></th>
                 <th class="px-4 py-3 text-left font-medium">Name</th>
-                <th class="px-4 py-3 text-left font-medium">Sortierung</th>
                 <th class="px-4 py-3 text-right font-medium">Aktion</th>
             </tr>
             </thead>
-            <tbody class="divide-y divide-line">
+            <tbody
+                class="divide-y divide-line"
+                x-data
+                x-init="Sortable.create($el, {
+                    handle: '.drag-handle',
+                    animation: 150,
+                    onEnd: () => $wire.reorder(Array.from($el.children).map(el => el.dataset.id)),
+                })"
+            >
             @forelse($groups as $group)
-                <tr class="transition hover:bg-surface-2/40">
+                <tr wire:key="group-{{ $group->id }}" data-id="{{ $group->id }}" class="transition hover:bg-surface-2/40">
+                    <td class="px-4 py-3 text-dim">
+                        <span class="drag-handle cursor-grab select-none text-lg leading-none active:cursor-grabbing">⠿</span>
+                    </td>
                     <td class="px-4 py-3 font-medium">{{ $group->name }}</td>
-                    <td class="px-4 py-3 text-dim">{{ $group->sort_order }}</td>
                     <td class="px-4 py-3 text-right">
                         <div class="flex justify-end gap-2">
                             <button

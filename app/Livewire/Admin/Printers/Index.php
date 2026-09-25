@@ -2,7 +2,10 @@
 
 namespace App\Livewire\Admin\Printers;
 
+use App\Jobs\DiscoverPrintersJob;
 use App\Models\Printer;
+use App\Models\PrinterDiscoveryScan;
+use App\Services\PrinterNetworkScanner;
 use App\Services\PrinterTestService;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -21,6 +24,15 @@ class Index extends Component
     public string $print_trigger = Printer::PRINT_TRIGGER_IMMEDIATE;
 
     public ?int $editingId = null;
+
+    public string $scanCidr = '';
+
+    public ?int $activeScanId = null;
+
+    public function mount(): void
+    {
+        $this->scanCidr = $this->guessLocalSubnet();
+    }
 
     protected function rules(): array
     {
@@ -141,6 +153,66 @@ class Index extends Component
         );
     }
 
+    public function startScan(PrinterNetworkScanner $scanner): void
+    {
+        $this->validate([
+            'scanCidr' => ['required', 'string'],
+        ]);
+
+        try {
+            /*
+             * Validiert die CIDR-Angabe (Format + max. Host-Anzahl)
+             * bereits hier, damit der Fehler sofort in der UI erscheint
+             * statt erst im Hintergrund-Job.
+             */
+            $scanner->hostsInCidr($this->scanCidr);
+        } catch (Throwable $exception) {
+            $this->addError('scanCidr', $exception->getMessage());
+
+            return;
+        }
+
+        $scan = PrinterDiscoveryScan::create([
+            'subnet_cidr' => $this->scanCidr,
+            'port' => 9100,
+            'status' => PrinterDiscoveryScan::STATUS_PENDING,
+        ]);
+
+        $this->activeScanId = $scan->id;
+
+        DiscoverPrintersJob::dispatch($scan->id)->afterCommit();
+    }
+
+    public function useDiscoveredPrinter(string $ip, int $port): void
+    {
+        $this->editingId = null;
+        $this->name = '';
+        $this->ip_address = $ip;
+        $this->port = $port;
+        $this->is_active = true;
+        $this->print_trigger = Printer::PRINT_TRIGGER_IMMEDIATE;
+        $this->resetValidation();
+    }
+
+    private function guessLocalSubnet(): string
+    {
+        $serverIp = request()->server('SERVER_ADDR');
+
+        if (! is_string($serverIp) || ! filter_var($serverIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            return '';
+        }
+
+        $parts = explode('.', $serverIp);
+
+        if (count($parts) !== 4) {
+            return '';
+        }
+
+        $parts[3] = '0';
+
+        return implode('.', $parts).'/24';
+    }
+
     public function testPrinter(int $printerId): void
     {
         $printer = Printer::findOrFail($printerId);
@@ -188,6 +260,10 @@ class Index extends Component
                 'printers' => Printer::query()
                     ->orderBy('name')
                     ->get(),
+
+                'activeScan' => $this->activeScanId
+                    ? PrinterDiscoveryScan::find($this->activeScanId)
+                    : null,
             ]
         )->layout('components.layouts.app');
     }

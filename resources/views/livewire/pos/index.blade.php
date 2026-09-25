@@ -251,6 +251,18 @@
                 {{-- Produktkategorien --}}
                 <div class="scrollbar-none mb-4 flex gap-2 overflow-x-auto pb-1">
 
+                    <button
+                        type="button"
+                        wire:key="category-all"
+                        wire:click="setCategory(null)"
+                        class="shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition
+                            {{ is_null($activeCategory)
+                                ? 'border-accent text-accent'
+                                : 'border-line text-dim' }}"
+                    >
+                        Alle
+                    </button>
+
                     @foreach($categories as $category)
 
                         <button

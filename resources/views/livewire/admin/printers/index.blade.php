@@ -23,6 +23,107 @@
         </div>
     @endif
 
+    {{-- ===================== DRUCKER-AUTODISCOVERY ===================== --}}
+
+    <div class="mb-6 rounded-2xl border border-line bg-surface p-4">
+
+        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-dim">
+            Drucker im Netzwerk suchen
+        </h2>
+
+        <form wire:submit="startScan" class="flex flex-wrap items-end gap-3">
+
+            <div class="flex flex-col gap-1">
+                <label class="text-xs font-medium text-dim">IP-Bereich (CIDR)</label>
+                <input
+                    type="text"
+                    wire:model="scanCidr"
+                    placeholder="192.168.1.0/24"
+                    class="w-52 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm placeholder:text-dim/60 focus:border-accent focus:outline-none"
+                >
+                @error('scanCidr')
+                <span class="text-xs text-occupied">{{ $message }}</span>
+                @enderror
+            </div>
+
+            <button
+                type="submit"
+                wire:loading.attr="disabled"
+                wire:target="startScan"
+                class="rounded-lg border border-accent/40 px-5 py-2 text-sm font-semibold text-accent transition hover:bg-accent/10 disabled:opacity-60"
+            >
+                Scan starten
+            </button>
+
+        </form>
+
+        @if($activeScan)
+
+            <div class="mt-4">
+
+                @if(in_array($activeScan->status, ['pending', 'running']))
+
+                    <div wire:poll.1500ms class="flex items-center gap-3 text-sm text-dim">
+                        <div class="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
+                            <div
+                                class="h-full rounded-full bg-accent transition-all"
+                                style="width: {{ $activeScan->total_hosts > 0 ? min(100, round($activeScan->scanned_hosts / $activeScan->total_hosts * 100)) : 0 }}%"
+                            ></div>
+                        </div>
+                        <span class="shrink-0 tabular-nums">
+                            {{ $activeScan->scanned_hosts }} / {{ $activeScan->total_hosts }}
+                        </span>
+                    </div>
+
+                @elseif($activeScan->status === 'failed')
+
+                    <p class="text-sm text-occupied">
+                        Scan fehlgeschlagen: {{ $activeScan->error_message }}
+                    </p>
+
+                @else
+
+                    <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-dim">
+                        {{ count($activeScan->results ?? []) }} Drucker gefunden
+                    </p>
+
+                    @forelse($activeScan->results ?? [] as $result)
+
+                        <div class="mb-2 flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2 text-sm">
+                            <span>
+                                {{ $result['ip'] }}:{{ $result['port'] }}
+                                <span class="text-xs text-dim">({{ $result['response_time_ms'] }} ms)</span>
+                            </span>
+
+                            @if($result['already_known'] ?? false)
+                                <span class="rounded-full bg-surface px-2.5 py-0.5 text-xs font-medium text-dim">
+                                    Bereits angelegt
+                                </span>
+                            @else
+                                <button
+                                    type="button"
+                                    wire:click="useDiscoveredPrinter('{{ $result['ip'] }}', {{ $result['port'] }})"
+                                    class="rounded-full border border-accent/40 px-3 py-1 text-xs font-medium text-accent transition hover:bg-accent/10"
+                                >
+                                    Übernehmen
+                                </button>
+                            @endif
+                        </div>
+
+                    @empty
+
+                        <p class="text-sm text-dim">Keine Drucker im angegebenen Bereich gefunden.</p>
+
+                    @endforelse
+
+                @endif
+
+            </div>
+
+        @endif
+
+    </div>
+
     <form wire:submit="save" class="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-surface p-4">
 
         <div class="flex flex-col gap-1">

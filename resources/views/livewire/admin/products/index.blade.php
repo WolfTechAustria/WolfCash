@@ -12,12 +12,23 @@
             <p class="mt-1 text-sm text-dim">Speisekarten-Artikel verwalten.</p>
         </div>
 
-        <input
-            type="text"
-            wire:model.live="search"
-            placeholder="Produkt suchen…"
-            class="w-64 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm placeholder:text-dim/60 focus:border-accent focus:outline-none"
-        >
+        <div class="flex items-center gap-2">
+            <select wire:model.live="filterCategoryId" class="rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm focus:border-accent focus:outline-none">
+                <option value="">Alle Kategorien</option>
+                @foreach($categories as $category)
+                    <option value="{{ $category->id }}">
+                        {{ $category->group?->name }} → {{ $category->name }}
+                    </option>
+                @endforeach
+            </select>
+
+            <input
+                type="text"
+                wire:model.live="search"
+                placeholder="Produkt suchen…"
+                class="w-64 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm placeholder:text-dim/60 focus:border-accent focus:outline-none"
+            >
+        </div>
     </div>
 
     <form wire:submit="save" class="mb-6 grid grid-cols-2 gap-3 rounded-2xl border border-line bg-surface p-5 sm:grid-cols-3 lg:grid-cols-6">
@@ -49,15 +60,6 @@
                 type="number"
                 step="0.01"
                 wire:model="price"
-                class="rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm focus:border-accent focus:outline-none"
-            >
-        </div>
-
-        <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-dim">Sortierung</label>
-            <input
-                type="number"
-                wire:model="sort_order"
                 class="rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm focus:border-accent focus:outline-none"
             >
         </div>
@@ -95,10 +97,13 @@
 
     </form>
 
+    <p class="mb-2 text-xs text-dim">Reihenfolge per Ziehen am Griff (⠿) anpassen — wirkt auf die aktuell gefilterte/angezeigte Liste.</p>
+
     <div class="overflow-x-auto rounded-2xl border border-line">
         <table class="w-full text-sm">
             <thead class="bg-surface-2 text-xs uppercase tracking-wide text-dim">
             <tr>
+                <th class="w-10 px-4 py-3"></th>
                 <th class="px-4 py-3 text-left font-medium">Name</th>
                 <th class="px-4 py-3 text-left font-medium">Gruppe</th>
                 <th class="px-4 py-3 text-left font-medium">Kategorie</th>
@@ -111,9 +116,20 @@
                 <th class="px-4 py-3 text-right font-medium">Aktion</th>
             </tr>
             </thead>
-            <tbody class="divide-y divide-line">
+            <tbody
+                class="divide-y divide-line"
+                x-data
+                x-init="Sortable.create($el, {
+                    handle: '.drag-handle',
+                    animation: 150,
+                    onEnd: () => $wire.reorder(Array.from($el.children).map(el => el.dataset.id)),
+                })"
+            >
             @forelse($products as $product)
-                <tr class="transition hover:bg-surface-2/40">
+                <tr wire:key="product-{{ $product->id }}" data-id="{{ $product->id }}" class="transition hover:bg-surface-2/40">
+                    <td class="px-4 py-3 text-dim">
+                        <span class="drag-handle cursor-grab select-none text-lg leading-none active:cursor-grabbing">⠿</span>
+                    </td>
                     <td class="px-4 py-3 font-medium">{{ $product->name }}</td>
                     <td class="px-4 py-3 text-dim">{{ $product->category?->group?->name }}</td>
                     <td class="px-4 py-3 text-dim">{{ $product->category?->name }}</td>
@@ -159,7 +175,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="10" class="px-4 py-8 text-center text-dim">Keine Produkte gefunden.</td>
+                    <td colspan="11" class="px-4 py-8 text-center text-dim">Keine Produkte gefunden.</td>
                 </tr>
             @endforelse
             </tbody>

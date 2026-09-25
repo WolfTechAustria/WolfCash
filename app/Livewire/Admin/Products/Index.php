@@ -23,7 +23,8 @@ class Index extends Component
     public ?int $editingId = null;
 
     public string $search = '';
-    public int $sort_order = 0;
+
+    public ?int $filterCategoryId = null;
 
     protected function rules(): array
     {
@@ -37,8 +38,6 @@ class Index extends Component
             'print_mode' => 'required',
 
             'available_quantity' => 'required|integer|min:-1',
-
-            'sort_order' => 'required|integer|min:0',
         ];
     }
 
@@ -53,12 +52,14 @@ class Index extends Component
             'print_mode' => $this->print_mode,
             'available_quantity' => $this->available_quantity,
             'is_active' => $this->is_active,
-            'sort_order' => $this->sort_order,
         ];
 
         if ($this->editingId) {
             Product::findOrFail($this->editingId)->update($data);
         } else {
+            $data['sort_order'] = (int) Product::where('product_category_id', $this->product_category_id)
+                ->max('sort_order') + 1;
+
             Product::create($data);
         }
 
@@ -72,7 +73,16 @@ class Index extends Component
         $this->print_mode = 'grouped';
         $this->available_quantity = -1;
         $this->is_active = true;
-        $this->sort_order = 0;
+    }
+
+    /**
+     * @param array<int, int|string> $orderedIds
+     */
+    public function reorder(array $orderedIds): void
+    {
+        foreach ($orderedIds as $index => $id) {
+            Product::whereKey($id)->update(['sort_order' => $index]);
+        }
     }
 
     public function delete(int $id)
@@ -106,8 +116,6 @@ class Index extends Component
         $this->available_quantity = $product->available_quantity;
 
         $this->is_active = $product->is_active;
-
-        $this->sort_order = $product->sort_order;
     }
 
 
@@ -132,6 +140,11 @@ class Index extends Component
                         'like',
                         '%' . $this->search . '%'
                     )
+                )
+                ->when(
+                    $this->filterCategoryId,
+                    fn ($query) =>
+                    $query->where('product_category_id', $this->filterCategoryId)
                 )
                 ->orderBy('sort_order')
                  ->orderBy('name')
