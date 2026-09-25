@@ -191,7 +191,6 @@
         <div
             wire:key="pos-order-wrapper-{{ $selectedTable }}"
             x-data="{ cartOpen: false }"
-            x-on:cart-item-added.window="cartOpen = true"
             class="flex min-h-[calc(100dvh-49px)] flex-col lg:flex-row"
         >
 

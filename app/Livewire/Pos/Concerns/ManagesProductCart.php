@@ -77,12 +77,7 @@ trait ManagesProductCart
             (int) $this->cart[$productId]['quantity'] + 1
         );
 
-        /*
-         * Warenkorb auf Tablet/Kellner-Kasse automatisch aufklappen,
-         * sobald wirklich etwas boniert wurde (nicht, wenn die Reservierung
-         * mangels Bestand fehlgeschlagen ist und die Position wieder
-         * entfernt wurde).
-         */
+        // Nur bei tatsächlich reservierter Menge; die Kellner-Kasse ignoriert das Event bewusst.
         if (isset($this->cart[$productId])) {
             $this->dispatch('cart-item-added');
         }
