@@ -249,7 +249,9 @@ class StockService
                 ->delete();
         }
 
-        $this->broadcast(array_keys($quantities));
+        /*
+         * Das Live-Signal kommt über den saved-Hook der Produkte.
+         */
     }
 
     /**
@@ -332,24 +334,46 @@ class StockService
     }
 
     /**
+     * Noch nicht versendete Produkt-IDs, gesammelt bis zum Commit,
+     * damit z. B. ein Bonieren mit mehreren Produkten nur ein
+     * einziges Live-Signal erzeugt.
+     *
+     * @var array<int, int>
+     */
+    private static array $pendingBroadcast = [];
+
+    /**
      * @param  array<int, int>  $productIds
      */
     public function broadcast(array $productIds): void
     {
-        $productIds = array_values(array_unique(array_map('intval', $productIds)));
-
         if ($productIds === []) {
             return;
         }
 
-        DB::afterCommit(function () use ($productIds): void {
+        foreach ($productIds as $productId) {
+            self::$pendingBroadcast[(int) $productId] = (int) $productId;
+        }
+
+        /*
+         * Jeder Commit versendet alles bis dahin Gesammelte; spätere
+         * Callbacks derselben Transaktion finden die Liste leer vor.
+         */
+        DB::afterCommit(function (): void {
+            if (self::$pendingBroadcast === []) {
+                return;
+            }
+
+            $productIds = array_values(self::$pendingBroadcast);
+            self::$pendingBroadcast = [];
+
             try {
+                /*
+                 * Gequeued: kostet hier nur einen Queue-Eintrag,
+                 * der Versand an Reverb läuft im Worker.
+                 */
                 ProductStockChanged::dispatch($productIds);
             } catch (\Throwable $e) {
-                /*
-                 * Ohne laufenden Reverb-Server darf keine Kassenaktion
-                 * scheitern, das Polling übernimmt dann.
-                 */
                 Log::warning('Bestands-Broadcast fehlgeschlagen: '.$e->getMessage());
             }
         });

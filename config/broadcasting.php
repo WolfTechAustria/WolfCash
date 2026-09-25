@@ -43,6 +43,10 @@ return [
             ],
             'client_options' => [
                 // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
+                // Kurze Timeouts, damit ein nicht erreichbarer Reverb-Server
+                // die Queue nicht blockiert.
+                'connect_timeout' => 1,
+                'timeout' => 2,
             ],
         ],
 
