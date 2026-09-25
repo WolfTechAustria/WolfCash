@@ -261,11 +261,14 @@
             await fetch('/api/device/register', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({
+                    uuid: fingerprint,
                     fingerprint: fingerprint,
-                    platform: navigator.userAgent
+                    name: 'Browser ' + (navigator.userAgentData?.platform || navigator.platform || 'Web'),
+                    platform: 'web'
                 })
             });
 
