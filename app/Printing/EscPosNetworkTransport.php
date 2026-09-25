@@ -63,6 +63,10 @@ class EscPosNetworkTransport implements PrintTransport
             $escPos->setTextSize(1, 1);
             $escPos->setEmphasis(false);
 
+            foreach ($document->headerLines as $line) {
+                $escPos->text((string) $line."\n");
+            }
+
             $escPos->feed();
 
             $escPos->setJustification(

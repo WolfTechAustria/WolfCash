@@ -25,6 +25,80 @@
             <div class="mb-5">
 
                 <h2 class="font-display text-lg font-semibold">
+                    Drucker
+                </h2>
+
+                <p class="mt-1 text-sm text-dim">
+                    Welche Drucker Zahlungsbelege und die Bons der
+                    stationären Kassen ausgeben. Drucker selbst werden unter
+                    <a href="{{ route('admin.printers') }}" class="text-accent hover:underline">Drucker</a>
+                    angelegt.
+                </p>
+
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+
+                <div>
+                    <label for="receiptPrinterId" class="mb-2 block text-sm font-medium">
+                        Drucker für Zahlungsbelege
+                    </label>
+
+                    <select
+                        id="receiptPrinterId"
+                        wire:model="receiptPrinterId"
+                        class="w-full rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-fg outline-none transition focus:border-accent"
+                    >
+                        <option value="">— kein Drucker —</option>
+                        @foreach($printers as $printer)
+                            <option value="{{ $printer->id }}">
+                                {{ $printer->name }}{{ $printer->is_active ? '' : ' (inaktiv)' }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    @error('receiptPrinterId')
+                        <p class="mt-1 text-xs text-occupied">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <label for="stationaryPrinterId" class="mb-2 block text-sm font-medium">
+                        Bon-Drucker der stationären Kassen
+                    </label>
+
+                    <select
+                        id="stationaryPrinterId"
+                        wire:model="stationaryPrinterId"
+                        class="w-full rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-fg outline-none transition focus:border-accent"
+                    >
+                        <option value="">— kein Drucker —</option>
+                        @foreach($printers as $printer)
+                            <option value="{{ $printer->id }}">
+                                {{ $printer->name }}{{ $printer->is_active ? '' : ' (inaktiv)' }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    <p class="mt-1 text-xs text-dim">
+                        Bestellungen an stationären Kassen werden nur hier gedruckt,
+                        nicht an den Stationen.
+                    </p>
+
+                    @error('stationaryPrinterId')
+                        <p class="mt-1 text-xs text-occupied">{{ $message }}</p>
+                    @enderror
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="rounded-2xl border border-line bg-surface p-5">
+
+            <div class="mb-5">
+
+                <h2 class="font-display text-lg font-semibold">
                     Zahlungsbelege
                 </h2>
 
@@ -139,6 +213,90 @@
                     ein Beleg kann an der Hauptkassa aber jederzeit auf
                     Wunsch gedruckt werden.
                 </p>
+
+            </div>
+
+            <div class="mt-5 grid gap-5 md:grid-cols-[1fr_auto]">
+
+                <div class="space-y-4">
+
+                    <div>
+                        <label for="receiptTitle" class="mb-2 block text-sm font-medium">
+                            Überschrift auf dem Zahlungsbeleg
+                        </label>
+
+                        <input
+                            id="receiptTitle"
+                            type="text"
+                            wire:model.live.debounce.300ms="receiptTitle"
+                            maxlength="32"
+                            placeholder="z. B. FF Musterdorf"
+                            class="w-full rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-fg outline-none transition focus:border-accent"
+                        >
+
+                        <p class="mt-1 text-xs text-dim">
+                            Wird groß und fett gedruckt – pro Zeile passen ca. 16 Zeichen.
+                            Leer lassen für „Zahlungsbeleg".
+                        </p>
+
+                        @error('receiptTitle')
+                            <p class="mt-1 text-xs text-occupied">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="receiptIntro" class="mb-2 block text-sm font-medium">
+                            Vortext
+                        </label>
+
+                        <textarea
+                            id="receiptIntro"
+                            wire:model.live.debounce.300ms="receiptIntro"
+                            rows="3"
+                            maxlength="300"
+                            placeholder="z. B. Zeltfest 2026&#10;Hauptstraße 1, 1234 Musterdorf"
+                            class="w-full rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-fg outline-none transition focus:border-accent"
+                        ></textarea>
+
+                        <p class="mt-1 text-xs text-dim">
+                            Erscheint zentriert unter der Überschrift, z. B. Veranstaltung,
+                            Adresse oder UID. Zeilenumbrüche werden übernommen.
+                        </p>
+
+                        @error('receiptIntro')
+                            <p class="mt-1 text-xs text-occupied">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                </div>
+
+                {{-- Vorschau: 32 Zeichen breit wie der Bondrucker --}}
+                <div>
+                    <p class="mb-2 text-sm font-medium">Vorschau</p>
+
+                    <div class="w-[19rem] max-w-full rounded-lg bg-white px-4 py-4 font-mono text-[12px] leading-snug text-neutral-900 shadow-inner">
+                        <p class="break-words text-center text-[20px] font-bold leading-tight">
+                            {{ trim($receiptTitle) !== '' ? trim($receiptTitle) : 'Zahlungsbeleg' }}
+                        </p>
+
+                        @if(trim($receiptIntro) !== '')
+                            <p class="mt-1 whitespace-pre-line break-words text-center">{{ trim($receiptIntro) }}</p>
+                        @endif
+
+                        @if(trim($receiptTitle) !== '')
+                            <p class="mt-2 text-center">Zahlungsbeleg</p>
+                        @endif
+
+                        <p class="mt-2 overflow-hidden whitespace-nowrap">================================</p>
+                        <p>Beleg: #123</p>
+                        <p>Tisch: 5</p>
+                        <p class="overflow-hidden whitespace-nowrap">--------------------------------</p>
+                        <p>2x Bier</p>
+                        <p>&nbsp;&nbsp;Summe: 9,00 EUR</p>
+                        <p class="overflow-hidden whitespace-nowrap">================================</p>
+                        <p>GESAMT: 9,00 EUR</p>
+                    </div>
+                </div>
 
             </div>
 

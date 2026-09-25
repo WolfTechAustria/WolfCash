@@ -7,6 +7,7 @@ use App\Models\PrintJob;
 use App\Models\Product;
 use App\Jobs\ProcessPrintJob;
 use App\Models\Printer;
+use App\Models\Setting;
 
 class PrintService
 {
@@ -126,7 +127,7 @@ class PrintService
             return;
         }
 
-        $printerId = (int) config('printing.stationary_order_printer_id', 0);
+        $printerId = Setting::stationaryPrinterId();
 
         $printJob = PrintJob::create([
             'order_id' => $order->id,

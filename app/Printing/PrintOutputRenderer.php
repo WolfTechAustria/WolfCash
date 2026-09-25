@@ -3,6 +3,7 @@
 namespace App\Printing;
 
 use App\Models\PrintOutput;
+use App\Models\Setting;
 use RuntimeException;
 
 class PrintOutputRenderer
@@ -209,10 +210,27 @@ class PrintOutputRenderer
             $payload['amount'] ?? 0
         );
 
+        /*
+         * Überschrift und Vortext kommen aus den Einstellungen des
+         * jeweiligen Veranstalters. Ohne eigene Überschrift bleibt
+         * "Zahlungsbeleg" der große Titel.
+         */
+        $title = Setting::receiptTitle();
+        $intro = Setting::receiptIntro();
+
+        $headerLines = $intro === ''
+            ? []
+            : array_map('rtrim', preg_split('/\r\n|\r|\n/', $intro));
+
+        if ($title !== '') {
+            if ($headerLines !== []) {
+                $headerLines[] = '';
+            }
+
+            $headerLines[] = 'Zahlungsbeleg';
+        }
+
         $lines = [
-            'WOLFCASH',
-            '',
-            'ZAHLUNGSBELEG',
             str_repeat('=', 32),
 
             'Beleg: #'.$receiptNumber,
@@ -324,9 +342,10 @@ class PrintOutputRenderer
         $lines[] = '';
 
         return new RenderedPrint(
-            title: 'Zahlungsbeleg',
+            title: $title !== '' ? $title : 'Zahlungsbeleg',
             lines: $lines,
             cutPaper: true,
+            headerLines: $headerLines,
         );
     }
 

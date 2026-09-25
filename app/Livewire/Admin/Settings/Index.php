@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Admin\Settings;
 
+use App\Models\Printer;
 use App\Models\Setting;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class Index extends Component
@@ -20,6 +22,14 @@ class Index extends Component
     public string $selfOrderingTitle = 'Direkt bestellen';
 
     public string $selfOrderingSubtitle = 'Scannen · Bestellen · Bezahlen';
+
+    public string $receiptTitle = '';
+
+    public string $receiptIntro = '';
+
+    public ?int $receiptPrinterId = null;
+
+    public ?int $stationaryPrinterId = null;
 
     public function mount(): void
     {
@@ -44,6 +54,18 @@ class Index extends Component
         $this->selfOrderingSubtitle =
             Setting::selfOrderingSubtitle();
 
+        $this->receiptTitle = Setting::receiptTitle();
+
+        $this->receiptIntro = Setting::receiptIntro();
+
+        // Veraltete IDs (z. B. aus der .env) nicht vorauswählen, sonst blockiert die Validierung das Speichern.
+        $this->receiptPrinterId = Printer::query()
+            ->whereKey(Setting::receiptPrinterId())
+            ->value('id');
+
+        $this->stationaryPrinterId = Printer::query()
+            ->whereKey(Setting::stationaryPrinterId())
+            ->value('id');
     }
 
     public function save(): void
@@ -63,6 +85,26 @@ class Index extends Component
                 'required',
                 'string',
                 'max:120',
+            ],
+            'receiptTitle' => [
+                'nullable',
+                'string',
+                'max:32',
+            ],
+            'receiptIntro' => [
+                'nullable',
+                'string',
+                'max:300',
+            ],
+            'receiptPrinterId' => [
+                'nullable',
+                'integer',
+                Rule::exists('printers', 'id'),
+            ],
+            'stationaryPrinterId' => [
+                'nullable',
+                'integer',
+                Rule::exists('printers', 'id'),
             ],
         ]);
 
@@ -103,6 +145,26 @@ class Index extends Component
             )
         );
 
+        Setting::putValue(
+            Setting::RECEIPT_TITLE,
+            trim($this->receiptTitle)
+        );
+
+        Setting::putValue(
+            Setting::RECEIPT_INTRO,
+            trim($this->receiptIntro)
+        );
+
+        Setting::putValue(
+            Setting::RECEIPT_PRINTER_ID,
+            $this->receiptPrinterId
+        );
+
+        Setting::putValue(
+            Setting::STATIONARY_PRINTER_ID,
+            $this->stationaryPrinterId
+        );
+
         session()->flash(
             'settingsSaved',
             'Die Einstellungen wurden gespeichert.'
@@ -112,7 +174,12 @@ class Index extends Component
     public function render()
     {
         return view(
-            'livewire.admin.settings.index'
+            'livewire.admin.settings.index',
+            [
+                'printers' => Printer::query()
+                    ->orderBy('name')
+                    ->get(),
+            ]
         )->layout('components.layouts.app');
     }
 }

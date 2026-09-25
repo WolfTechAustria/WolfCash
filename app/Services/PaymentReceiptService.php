@@ -291,16 +291,13 @@ class PaymentReceiptService
      */
     private function receiptPrinter(): Printer
     {
-        $printerId = (int) config(
-            'printing.receipt_printer_id',
-            0
-        );
+        $printerId = Setting::receiptPrinterId();
 
         if ($printerId <= 0) {
             throw new RuntimeException(
                 'Es ist kein Drucker für Zahlungsbelege '
-                .'konfiguriert. Bitte '
-                .'PRINT_RECEIPT_PRINTER_ID in der .env setzen.'
+                .'konfiguriert. Bitte in den Einstellungen '
+                .'einen Belegdrucker wählen.'
             );
         }
 
@@ -329,10 +326,7 @@ class PaymentReceiptService
      */
     private function configuredReceiptPrinterOrNull(): ?Printer
     {
-        $printerId = (int) config(
-            'printing.receipt_printer_id',
-            0
-        );
+        $printerId = Setting::receiptPrinterId();
 
         if ($printerId <= 0) {
             return null;

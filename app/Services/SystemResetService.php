@@ -210,6 +210,14 @@ class SystemResetService
             if (in_array(self::CATEGORY_PRINTING, $categories, true)) {
                 DB::table('printers')->delete();
                 DB::table('production_stations')->delete();
+
+                $printerKeys = [Setting::RECEIPT_PRINTER_ID, Setting::STATIONARY_PRINTER_ID];
+
+                DB::table('settings')->whereIn('key', $printerKeys)->delete();
+
+                foreach ($printerKeys as $key) {
+                    Cache::forget('setting:'.$key);
+                }
             }
 
             if (in_array(self::CATEGORY_DEVICES, $categories, true)) {
@@ -228,15 +236,7 @@ class SystemResetService
             if (in_array(self::CATEGORY_SETTINGS, $categories, true)) {
                 DB::table('settings')->delete();
 
-                foreach ([
-                    Setting::RECEIPT_AUTOMATIC_PRINTING_ENABLED,
-                    Setting::RECEIPT_REPRINTING_ENABLED,
-                    Setting::SELF_ORDERING_ENABLED,
-                    Setting::SELF_ORDERING_TITLE,
-                    Setting::SELF_ORDERING_SUBTITLE,
-                    Setting::CARD_PAYMENT_ENABLED,
-                    Setting::VOUCHER_PAYMENT_ENABLED,
-                ] as $key) {
+                foreach (Setting::keys() as $key) {
                     Cache::forget('setting:'.$key);
                 }
             }

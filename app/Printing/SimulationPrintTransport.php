@@ -17,6 +17,7 @@ class SimulationPrintTransport implements PrintTransport
                 'printer_id' => $printer->id,
                 'printer_name' => $printer->name,
                 'title' => $document->title,
+                'header_lines' => $document->headerLines,
                 'lines' => $document->lines,
                 'cut_paper' => $document->cutPaper,
                 'open_drawer' => $document->openDrawer,

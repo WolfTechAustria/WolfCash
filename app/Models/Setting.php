@@ -28,6 +28,40 @@ class Setting extends Model
     public const VOUCHER_PAYMENT_ENABLED =
         'voucher_payment_enabled';
 
+    public const RECEIPT_TITLE =
+        'receipt_title';
+
+    public const RECEIPT_INTRO =
+        'receipt_intro';
+
+    public const RECEIPT_PRINTER_ID =
+        'receipt_printer_id';
+
+    public const STATIONARY_PRINTER_ID =
+        'stationary_printer_id';
+
+    /**
+     * Alle bekannten Schlüssel, z. B. für den System-Reset.
+     *
+     * @return list<string>
+     */
+    public static function keys(): array
+    {
+        return [
+            static::RECEIPT_AUTOMATIC_PRINTING_ENABLED,
+            static::RECEIPT_REPRINTING_ENABLED,
+            static::SELF_ORDERING_ENABLED,
+            static::SELF_ORDERING_TITLE,
+            static::SELF_ORDERING_SUBTITLE,
+            static::CARD_PAYMENT_ENABLED,
+            static::VOUCHER_PAYMENT_ENABLED,
+            static::RECEIPT_TITLE,
+            static::RECEIPT_INTRO,
+            static::RECEIPT_PRINTER_ID,
+            static::STATIONARY_PRINTER_ID,
+        ];
+    }
+
     protected $fillable = [
         'key',
         'value',
@@ -105,6 +139,36 @@ class Setting extends Model
         return static::boolean(
             static::CARD_PAYMENT_ENABLED,
             true
+        );
+    }
+
+    public static function receiptTitle(): string
+    {
+        return trim((string) static::valueOf(static::RECEIPT_TITLE, ''));
+    }
+
+    public static function receiptIntro(): string
+    {
+        return trim((string) static::valueOf(static::RECEIPT_INTRO, ''));
+    }
+
+    /*
+     * Im Admin gewählter Drucker; die .env-Werte bleiben als Rückfall
+     * für bestehende Installationen erhalten.
+     */
+    public static function receiptPrinterId(): int
+    {
+        return (int) (
+            static::valueOf(static::RECEIPT_PRINTER_ID)
+            ?: config('printing.receipt_printer_id', 0)
+        );
+    }
+
+    public static function stationaryPrinterId(): int
+    {
+        return (int) (
+            static::valueOf(static::STATIONARY_PRINTER_ID)
+            ?: config('printing.stationary_order_printer_id', 0)
         );
     }
 
