@@ -59,11 +59,11 @@ class PaymentReceiptService
          * Fehlt die Konfiguration, darf die Zahlung trotzdem
          * erfolgreich abgeschlossen werden.
          */
-        $printer = $automaticPrintingEnabled
-            ? $this->receiptPrinter()
-            : $this->configuredReceiptPrinterOrNull();
-
         $order->loadMissing('table');
+
+        $printer = $automaticPrintingEnabled
+            ? $this->receiptPrinter($order)
+            : $this->configuredReceiptPrinterOrNull($order);
 
         $invoiceRecipient = array_filter([
             'name' => $payment->invoice_recipient_name,
@@ -184,7 +184,7 @@ class PaymentReceiptService
         $printJob = PrintJob::query()
             ->with([
                 'printer',
-                'order',
+                'order.table',
                 'outputs',
             ])
             ->where('payment_id', $payment->id)
@@ -212,7 +212,7 @@ class PaymentReceiptService
          * konfigurierten Belegdrucker.
          */
         $printer = $printJob->printer
-            ?? $this->receiptPrinter();
+            ?? $this->receiptPrinter($printJob->order);
 
         if (! $printer->is_active) {
             throw new RuntimeException(
@@ -289,9 +289,24 @@ class PaymentReceiptService
      * Gibt den aktiven, verpflichtend konfigurierten
      * Drucker für Zahlungsbelege zurück.
      */
-    private function receiptPrinter(): Printer
+    /**
+     * Stationäre Kassen mit eigenem Drucker drucken ihre Belege dort,
+     * alle anderen auf dem Belegdrucker aus den Einstellungen.
+     */
+    private function receiptPrinterIdFor(?Order $order): int
     {
-        $printerId = Setting::receiptPrinterId();
+        $table = $order?->table;
+
+        if ($table?->is_stationary && $table->printer_id) {
+            return (int) $table->printer_id;
+        }
+
+        return Setting::receiptPrinterId();
+    }
+
+    private function receiptPrinter(?Order $order = null): Printer
+    {
+        $printerId = $this->receiptPrinterIdFor($order);
 
         if ($printerId <= 0) {
             throw new RuntimeException(
@@ -324,9 +339,9 @@ class PaymentReceiptService
      * deaktiviert ist. Eine Zahlung darf dann auch ohne
      * erreichbaren Drucker funktionieren.
      */
-    private function configuredReceiptPrinterOrNull(): ?Printer
+    private function configuredReceiptPrinterOrNull(?Order $order = null): ?Printer
     {
-        $printerId = Setting::receiptPrinterId();
+        $printerId = $this->receiptPrinterIdFor($order);
 
         if ($printerId <= 0) {
             return null;

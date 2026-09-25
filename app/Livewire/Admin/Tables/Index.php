@@ -3,6 +3,8 @@
 namespace App\Livewire\Admin\Tables;
 
 use Livewire\Component;
+use App\Models\Printer;
+use App\Models\Setting;
 use App\Models\Table;
 use App\Services\TableOrderSessionService;
 
@@ -121,6 +123,18 @@ class Index extends Component
         ]);
     }
 
+    public function setPrinter(int $tableId, ?string $printerId): void
+    {
+        $printerId = $printerId === null || $printerId === ''
+            ? null
+            : Printer::query()->findOrFail((int) $printerId)->id;
+
+        Table::query()
+            ->where('is_stationary', true)
+            ->findOrFail($tableId)
+            ->update(['printer_id' => $printerId]);
+    }
+
     public function save()
     {
         $this->validate();
@@ -152,6 +166,12 @@ class Index extends Component
                 ->with('activeTableOrderSession')
                 ->orderBy('number')
                 ->get(),
+
+            'printers' => Printer::query()
+                ->orderBy('name')
+                ->get(),
+
+            'defaultStationaryPrinter' => Printer::find(Setting::stationaryPrinterId()),
         ])->layout('components.layouts.app');
     }
 }

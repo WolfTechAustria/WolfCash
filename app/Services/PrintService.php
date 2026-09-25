@@ -127,7 +127,7 @@ class PrintService
             return;
         }
 
-        $printerId = Setting::stationaryPrinterId();
+        $printerId = (int) ($order->table?->printer_id ?: Setting::stationaryPrinterId());
 
         $printJob = PrintJob::create([
             'order_id' => $order->id,

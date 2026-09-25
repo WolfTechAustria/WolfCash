@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\TableOrderSession;
@@ -15,6 +16,7 @@ class Table extends Model
         'status',
         'self_order_enabled',
         'is_stationary',
+        'printer_id',
     ];
 
     protected function casts(): array
@@ -23,6 +25,14 @@ class Table extends Model
             'self_order_enabled' => 'boolean',
             'is_stationary' => 'boolean',
         ];
+    }
+
+    /*
+     * Eigener Drucker einer stationären Kassa für Bons und Zahlungsbelege.
+     */
+    public function printer(): BelongsTo
+    {
+        return $this->belongsTo(Printer::class);
     }
 
     public function orders()

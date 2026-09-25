@@ -64,7 +64,7 @@
 
                 <div>
                     <label for="stationaryPrinterId" class="mb-2 block text-sm font-medium">
-                        Bon-Drucker der stationären Kassen
+                        Standard-Bon-Drucker der stationären Kassen
                     </label>
 
                     <select
@@ -81,8 +81,11 @@
                     </select>
 
                     <p class="mt-1 text-xs text-dim">
-                        Bestellungen an stationären Kassen werden nur hier gedruckt,
-                        nicht an den Stationen.
+                        Bestellungen an stationären Kassen werden hier statt an den
+                        Stationen gedruckt. Jede Kassa kann unter
+                        <a href="{{ route('admin.tables') }}" class="text-accent hover:underline">Tische</a>
+                        einen eigenen Drucker bekommen – dort kommen dann auch
+                        ihre Zahlungsbelege heraus.
                     </p>
 
                     @error('stationaryPrinterId')

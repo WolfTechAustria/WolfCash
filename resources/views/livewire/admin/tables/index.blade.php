@@ -296,6 +296,26 @@
                             >
                                 Kasse öffnen
                             </a>
+
+                            <label class="mt-3 block text-[11px] font-medium uppercase tracking-wide text-dim" for="table-printer-{{ $table->id }}">
+                                Drucker (Bons &amp; Belege)
+                            </label>
+
+                            <select
+                                id="table-printer-{{ $table->id }}"
+                                wire:key="table-printer-{{ $table->id }}"
+                                wire:change="setPrinter({{ $table->id }}, $event.target.value)"
+                                class="mt-1 w-48 rounded-lg border border-line bg-surface-2 px-2 py-1.5 text-xs focus:border-accent focus:outline-none"
+                            >
+                                <option value="" @selected(! $table->printer_id)>
+                                    Standard{{ $defaultStationaryPrinter ? ' ('.$defaultStationaryPrinter->name.')' : ' – nicht gesetzt' }}
+                                </option>
+                                @foreach($printers as $printer)
+                                    <option value="{{ $printer->id }}" @selected((int) $table->printer_id === $printer->id)>
+                                        {{ $printer->name }}{{ $printer->is_active ? '' : ' (inaktiv)' }}
+                                    </option>
+                                @endforeach
+                            </select>
                         @endif
 
                     </td>
