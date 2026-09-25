@@ -21,6 +21,7 @@ use App\Livewire\Admin\DailyClosings\Index as DailyClosingsIndex;
 use App\Livewire\Admin\DailyClosings\Show as DailyClosingShow;
 use App\Livewire\Admin\ProductReports\Index as ProductReportsIndex;
 use App\Livewire\Admin\Settings\Index as SettingsIndex;
+use App\Livewire\Admin\SystemReset\Index as SystemResetIndex;
 use App\Http\Controllers\MobileWebSessionController;
 use App\Livewire\SelfOrder\Index as SelfOrderIndex;
 use App\Http\Controllers\SelfOrderPaymentController;
@@ -193,6 +194,10 @@ Route::middleware('auth')->group(function () {
             //Einstellungen
             Route::get('/settings',SettingsIndex::class)
                 ->name('admin.settings');
+
+            //Datenbereinigung / System zurücksetzen
+            Route::get('/system-reset', SystemResetIndex::class)
+                ->name('admin.system-reset');
 
 
             //PDF QR Code ansicht

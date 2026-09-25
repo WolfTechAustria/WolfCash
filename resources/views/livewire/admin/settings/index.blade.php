@@ -297,4 +297,16 @@
 
     </form>
 
+    <div class="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-occupied/30 bg-surface p-4">
+        <p class="text-sm text-dim">
+            Veranstaltung beendet oder das Gerät wird weitergegeben?
+        </p>
+        <a
+            href="{{ route('admin.system-reset') }}"
+            class="shrink-0 rounded-full border border-occupied/40 px-3 py-1.5 text-xs font-medium text-occupied transition hover:bg-occupied/10"
+        >
+            Zur Datenbereinigung →
+        </a>
+    </div>
+
 </div>
