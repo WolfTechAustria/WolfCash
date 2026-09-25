@@ -288,7 +288,7 @@
     </div>
 
     {{-- Zahlungsarten --}}
-    <div class="mb-5 grid grid-cols-2 gap-2.5 md:grid-cols-4">
+    <div class="mb-5 grid grid-cols-2 gap-2.5 md:grid-cols-5">
 
         <div class="rounded-xl border border-line bg-surface p-3">
 
@@ -320,6 +320,27 @@
                     ',',
                     '.'
                 ) }} €
+            </p>
+
+        </div>
+
+        <div class="rounded-xl border border-dashed border-line bg-surface p-3">
+
+            <p class="text-xs font-medium uppercase tracking-wide text-dim">
+                Bons eingelöst
+            </p>
+
+            <p class="mt-1 font-display text-lg font-semibold tabular-nums">
+                {{ number_format(
+                    $summary['voucher_amount'],
+                    2,
+                    ',',
+                    '.'
+                ) }} €
+            </p>
+
+            <p class="mt-0.5 text-[11px] text-dim">
+                nicht im Umsatz
             </p>
 
         </div>
@@ -519,11 +540,7 @@
                         <div>
 
                             <p class="font-medium">
-                                {{ match($payment->payment_method) {
-                                    'cash' => 'Barzahlung',
-                                    'card' => 'Kartenzahlung',
-                                    default => $payment->payment_method,
-                                } }}
+                                {{ \App\Models\Payment::methodLabel($payment->payment_method) }}
                             </p>
 
                             <p class="mt-0.5 text-xs text-dim">

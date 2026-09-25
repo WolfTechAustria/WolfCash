@@ -202,6 +202,50 @@
 
             </div>
 
+            <div class="mt-4 flex items-start justify-between gap-5 rounded-xl bg-surface-2 p-4">
+
+                <div>
+
+                    <p class="font-medium">
+                        Bon / Gutschein
+                    </p>
+
+                    <p class="mt-1 text-sm text-dim">
+                        Kellner können an der stationären Kassa gekaufte Bons
+                        als Bezahlung annehmen. Eingelöste Bons zählen nicht
+                        noch einmal zum Umsatz, der Bestand wird zurückgebucht.
+                    </p>
+
+                    @if($voucherPaymentEnabled)
+                        <p class="mt-2 text-xs font-medium text-free">
+                            Bon-Zahlung aktiviert
+                        </p>
+                    @else
+                        <p class="mt-2 text-xs font-medium text-occupied">
+                            Bon-Zahlung deaktiviert
+                        </p>
+                    @endif
+
+                </div>
+
+                <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+
+                    <input
+                        type="checkbox"
+                        wire:model.live="voucherPaymentEnabled"
+                        class="peer sr-only"
+                    >
+
+                    <span class="h-7 w-12 rounded-full bg-surface transition peer-checked:bg-accent peer-focus-visible:ring-2 peer-focus-visible:ring-accent/40">
+
+                        <span class="absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5"></span>
+
+                    </span>
+
+                </label>
+
+            </div>
+
         </section>
 
         <section class="rounded-2xl border border-line bg-surface p-5">

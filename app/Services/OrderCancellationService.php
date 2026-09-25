@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Payment;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use App\Models\OrderItemCancellation;
@@ -71,12 +72,16 @@ class OrderCancellationService
             ]);
 
             /*
-             * Stornierte Menge wieder in den Bestand zurückbuchen.
+             * Stornierte Menge wieder in den Bestand zurückbuchen –
+             * außer bei per Bon bezahlten Positionen, die bereits beim
+             * Einlösen zurückgebucht wurden.
              */
-            $this->stockService->restock(
-                $lockedItem->product_id,
-                $quantity
-            );
+            if ($lockedItem->payment?->payment_method !== Payment::VOUCHER) {
+                $this->stockService->restock(
+                    $lockedItem->product_id,
+                    $quantity
+                );
+            }
 
             $cancellation = OrderItemCancellation::create([
                 'order_item_id' => $lockedItem->id,

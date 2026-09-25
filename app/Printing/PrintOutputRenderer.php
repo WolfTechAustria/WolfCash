@@ -188,7 +188,7 @@ class PrintOutputRenderer
         ) {
             'cash' => 'Bar',
             'card' => 'Karte',
-            'voucher' => 'Gutschein',
+            'voucher' => 'Bon/Gutschein',
             'invoice' => 'Rechnung',
             'house' => 'Auf Haus',
             default => ucfirst(

@@ -169,6 +169,21 @@
             </p>
         </div>
 
+        @if(($summary['voucher_amount'] ?? 0) > 0)
+            <div class="rounded-xl border border-dashed border-line bg-surface p-3">
+                <p class="text-xs text-dim">Bons eingelöst (nicht im Umsatz)</p>
+
+                <p class="mt-1 font-display text-lg font-semibold tabular-nums">
+                    {{ number_format(
+                        $summary['voucher_amount'],
+                        2,
+                        ',',
+                        '.'
+                    ) }} €
+                </p>
+            </div>
+        @endif
+
         <div class="rounded-xl border border-line bg-surface p-3">
             <p class="text-xs text-dim">Bestellungen</p>
 
@@ -314,15 +329,7 @@
 
                         <div>
                             <p class="font-medium">
-                                {{ match(
-                                    $payment['payment_method'] ?? ''
-                                ) {
-                                    'cash' => 'Barzahlung',
-                                    'card' => 'Kartenzahlung',
-                                    default =>
-                                        $payment['payment_method']
-                                        ?? 'Unbekannt',
-                                } }}
+                                {{ \App\Models\Payment::methodLabel($payment['payment_method'] ?? null) }}
                             </p>
 
                             <p class="mt-0.5 text-xs text-dim">

@@ -491,14 +491,7 @@
                                 <div class="flex flex-wrap items-center gap-2">
 
                                     <p class="font-medium">
-                                        {{ match($payment->payment_method) {
-                                            'cash' => 'Barzahlung',
-                                            'card' => 'Kartenzahlung',
-                                            'voucher' => 'Gutschein',
-                                            'invoice' => 'Rechnung',
-                                            'house' => 'Auf Haus',
-                                            default => $payment->payment_method,
-                                        } }}
+                                        {{ \App\Models\Payment::methodLabel($payment->payment_method) }}
                                     </p>
 
                                     <span class="text-xs font-medium {{ $receiptStatus[0] }}">

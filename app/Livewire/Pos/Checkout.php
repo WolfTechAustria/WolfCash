@@ -160,7 +160,7 @@ class Checkout extends Component
         string $method,
         PaymentService $paymentService
     ): void {
-        if (! $this->order) {
+        if (! $this->order || ! $this->ensureDirectMethodAllowed($method)) {
             return;
         }
 
@@ -208,7 +208,7 @@ class Checkout extends Component
         string $method,
         PaymentService $paymentService
     ): void {
-        if (! $this->order) {
+        if (! $this->order || ! $this->ensureDirectMethodAllowed($method)) {
             return;
         }
 
@@ -389,6 +389,34 @@ class Checkout extends Component
     public function getCardPaymentEnabledProperty(): bool
     {
         return Setting::cardPaymentEnabled();
+    }
+
+    /*
+     * An der stationären Kassa werden Bons verkauft, nicht eingelöst.
+     */
+    public function getVoucherPaymentEnabledProperty(): bool
+    {
+        return Setting::voucherPaymentEnabled()
+            && ! $this->table->is_stationary;
+    }
+
+    /**
+     * Kartenzahlungen laufen über das Terminal (startXCardPayment);
+     * direkt verbuchen lassen sich nur Bar und – falls erlaubt – Bon.
+     */
+    private function ensureDirectMethodAllowed(string $method): bool
+    {
+        $allowed = $method === Payment::CASH
+            || ($method === Payment::VOUCHER && $this->voucherPaymentEnabled);
+
+        if (! $allowed) {
+            $this->addError(
+                'payment',
+                'Diese Zahlungsart ist nicht verfügbar.'
+            );
+        }
+
+        return $allowed;
     }
 
     private function ensureCardPaymentEnabled(): bool

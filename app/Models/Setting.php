@@ -25,6 +25,9 @@ class Setting extends Model
     public const CARD_PAYMENT_ENABLED =
         'card_payment_enabled';
 
+    public const VOUCHER_PAYMENT_ENABLED =
+        'voucher_payment_enabled';
+
     protected $fillable = [
         'key',
         'value',
@@ -101,6 +104,14 @@ class Setting extends Model
     {
         return static::boolean(
             static::CARD_PAYMENT_ENABLED,
+            true
+        );
+    }
+
+    public static function voucherPaymentEnabled(): bool
+    {
+        return static::boolean(
+            static::VOUCHER_PAYMENT_ENABLED,
             true
         );
     }

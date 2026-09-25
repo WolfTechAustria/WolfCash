@@ -19,7 +19,7 @@
             @if($lastPayment)
                 <div class="mt-2">
                     <p class="text-sm text-dim">
-                        Zahlungsart: {{ $lastPayment->payment_method }}
+                        Zahlungsart: {{ \App\Models\Payment::methodLabel($lastPayment->payment_method) }}
                     </p>
                     <p class="font-display text-3xl font-semibold tabular-nums text-free">
                         {{ number_format($lastPayment->amount, 2) }} €
@@ -202,7 +202,7 @@
                 <div class="mb-5 flex flex-col gap-1.5">
                     @foreach($order->payments as $payment)
                         <div class="flex items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm">
-                            <span class="text-dim">{{ $payment->created_at->format('H:i') }} · {{ $payment->payment_method }}</span>
+                            <span class="text-dim">{{ $payment->created_at->format('H:i') }} · {{ \App\Models\Payment::methodLabel($payment->payment_method) }}</span>
 
                             <div class="flex items-center gap-3">
                                 <span class="font-medium tabular-nums">{{ number_format($payment->amount, 2) }} €</span>
@@ -289,6 +289,25 @@
                 @endif
 
             </div>
+
+            @if($this->voucherPaymentEnabled)
+                <div class="mt-2.5 grid grid-cols-2 gap-2.5">
+                    <button
+                        wire:click="paySelected('voucher')"
+                        wire:confirm="Auswahl mit Bon bezahlen? Bitte den Papierbon einbehalten."
+                        class="rounded-xl border border-dashed border-accent/60 py-3 text-sm font-medium text-accent transition active:scale-[0.98]"
+                    >
+                        Auswahl · Bon
+                    </button>
+                    <button
+                        wire:click="payOpen('voucher')"
+                        wire:confirm="Gesamten Rest mit Bon bezahlen? Bitte den Papierbon einbehalten."
+                        class="rounded-xl border border-dashed border-accent/60 py-3 text-sm font-medium text-accent transition active:scale-[0.98]"
+                    >
+                        Rest · Bon
+                    </button>
+                </div>
+            @endif
 
         @endif
 

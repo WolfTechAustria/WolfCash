@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin\ProductReports;
 
 use App\Models\OrderItem;
+use App\Models\Payment;
 use App\Models\ProductCategory;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -173,6 +174,17 @@ class Index extends Component
                 fn (Builder $query) => $query->whereBetween(
                     'created_at',
                     [$from, $to]
+                )
+            )
+            /*
+             * Per Bon eingelöste Positionen wurden bereits an der
+             * stationären Kassa verkauft und zählen dort.
+             */
+            ->whereDoesntHave(
+                'payment',
+                fn (Builder $query) => $query->where(
+                    'payment_method',
+                    Payment::VOUCHER
                 )
             )
             ->when(

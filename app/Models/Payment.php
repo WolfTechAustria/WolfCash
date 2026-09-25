@@ -19,6 +19,18 @@ class Payment extends Model
 
     public const HOUSE = 'house';
 
+    public static function methodLabel(?string $method): string
+    {
+        return match ($method) {
+            self::CASH => 'Barzahlung',
+            self::CARD => 'Kartenzahlung',
+            self::VOUCHER => 'Bon/Gutschein',
+            self::INVOICE => 'Rechnung',
+            self::HOUSE => 'Auf Haus',
+            default => (string) ($method ?? 'Unbekannt'),
+        };
+    }
+
     protected $fillable = [
         'order_id',
         'amount',
@@ -40,6 +52,11 @@ class Payment extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
     }
 
     public function cancellations(): HasMany

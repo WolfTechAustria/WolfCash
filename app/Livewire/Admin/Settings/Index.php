@@ -15,6 +15,8 @@ class Index extends Component
 
     public bool $cardPaymentEnabled = true;
 
+    public bool $voucherPaymentEnabled = true;
+
     public string $selfOrderingTitle = 'Direkt bestellen';
 
     public string $selfOrderingSubtitle = 'Scannen · Bestellen · Bezahlen';
@@ -29,6 +31,9 @@ class Index extends Component
 
         $this->cardPaymentEnabled =
             Setting::cardPaymentEnabled();
+
+        $this->voucherPaymentEnabled =
+            Setting::voucherPaymentEnabled();
 
         $this->selfOrderingEnabled =
             Setting::selfOrderingEnabled();
@@ -74,6 +79,11 @@ class Index extends Component
         Setting::putValue(
             Setting::CARD_PAYMENT_ENABLED,
             $this->cardPaymentEnabled
+        );
+
+        Setting::putValue(
+            Setting::VOUCHER_PAYMENT_ENABLED,
+            $this->voucherPaymentEnabled
         );
 
         Setting::putValue(

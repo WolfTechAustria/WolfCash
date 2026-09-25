@@ -154,7 +154,24 @@ class Index extends Component
             )
         );
 
-        $paidAmount = (float) $payments->sum('amount');
+        /*
+         * Eingelöste Bons sind bereits an der stationären Kassa als
+         * Umsatz verbucht und dürfen hier nicht doppelt zählen.
+         */
+        $voucherOrderAmount = (float) $orders->sum(
+            fn (Order $order) => $order->payments
+                ->where('payment_method', Payment::VOUCHER)
+                ->sum('amount')
+        );
+
+        $voucherAmount = (float) $payments
+            ->where('payment_method', Payment::VOUCHER)
+            ->sum('amount');
+
+        $grossAmount -= $voucherOrderAmount;
+        $payableAmount -= $voucherOrderAmount;
+
+        $paidAmount = (float) $payments->sum('amount') - $voucherAmount;
 
         $cashAmount = (float) $payments
             ->where('payment_method', 'cash')
@@ -206,6 +223,11 @@ class Index extends Component
 
             'card_amount' => round(
                 $cardAmount,
+                2
+            ),
+
+            'voucher_amount' => round(
+                $voucherAmount,
                 2
             ),
 

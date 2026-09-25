@@ -15,6 +15,7 @@ class OrderItem extends Model
         'status',
         'note',
         'paid_at',
+        'payment_id',
         'production_status',
         'production_completed_quantity',
         'production_printed_quantity',
@@ -42,6 +43,11 @@ class OrderItem extends Model
     public function order()
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function payment(): BelongsTo
+    {
+        return $this->belongsTo(Payment::class);
     }
 
     protected function casts(): array {

@@ -12,6 +12,7 @@ class PaymentService
     public function __construct(
         private readonly DailyClosingService $dailyClosingService,
         private readonly PaymentReceiptService $paymentReceiptService,
+        private readonly StockService $stockService,
     ) {
     }
 
@@ -38,6 +39,7 @@ class PaymentService
         ): ?Payment {
             $amount = 0.0;
             $receiptItems = [];
+            $paidItemIds = [];
 
             foreach ($selectedForPayment as $itemId => $quantity) {
                 $item = OrderItem::query()
@@ -95,6 +97,8 @@ class PaymentService
                         'paid_at' => now(),
                     ]);
 
+                    $paidItemIds[] = $item->id;
+
                     continue;
                 }
 
@@ -103,7 +107,7 @@ class PaymentService
                  * Die bezahlte Menge wird als eigener, bereits
                  * bezahlter Datensatz abgespalten.
                  */
-                OrderItem::create([
+                $paidItemIds[] = OrderItem::create([
                     'order_id' => $item->order_id,
                     'product_id' => $item->product_id,
                     'quantity' => $payQuantity,
@@ -129,7 +133,7 @@ class PaymentService
                         $payQuantity,
                         (int) $item->production_printed_quantity
                     ),
-                ]);
+                ])->id;
 
                 /*
                  * Stornierte Mengen verbleiben am ursprünglichen
@@ -154,6 +158,8 @@ class PaymentService
                 'invoice_recipient_address' => $invoiceRecipient['address'] ?? null,
                 'invoice_recipient_vat_id' => $invoiceRecipient['vat_id'] ?? null,
             ]);
+
+            $this->finalizePayment($payment, $paidItemIds, $receiptItems);
 
             $this->paymentReceiptService->createAndDispatch(
                 payment: $payment,
@@ -195,6 +201,7 @@ class PaymentService
 
             $receiptItems = [];
             $amount = 0.0;
+            $paidItemIds = [];
 
             foreach ($openItems as $item) {
                 $payQuantity = (int) $item->open_quantity;
@@ -221,6 +228,8 @@ class PaymentService
                 $item->update([
                     'paid_at' => now(),
                 ]);
+
+                $paidItemIds[] = $item->id;
             }
 
             if ($amount <= 0 || $receiptItems === []) {
@@ -237,6 +246,8 @@ class PaymentService
                 'invoice_recipient_vat_id' => $invoiceRecipient['vat_id'] ?? null,
             ]);
 
+            $this->finalizePayment($payment, $paidItemIds, $receiptItems);
+
             $this->paymentReceiptService->createAndDispatch(
                 payment: $payment,
                 order: $order,
@@ -245,5 +256,35 @@ class PaymentService
 
             return $payment;
         });
+    }
+
+    /**
+     * @param  list<int>  $paidItemIds
+     * @param  list<array{product_id: ?int, quantity: int}>  $receiptItems
+     */
+    private function finalizePayment(
+        Payment $payment,
+        array $paidItemIds,
+        array $receiptItems
+    ): void {
+        OrderItem::query()
+            ->whereKey($paidItemIds)
+            ->update(['payment_id' => $payment->id]);
+
+        /*
+         * Ein eingelöster Bon wurde an der stationären Kassa bereits
+         * verkauft und vom Bestand abgebucht; die erneute Abbuchung
+         * durch die Tischbestellung wird hier ausgeglichen.
+         */
+        if ($payment->payment_method !== Payment::VOUCHER) {
+            return;
+        }
+
+        foreach ($receiptItems as $receiptItem) {
+            $this->stockService->restock(
+                $receiptItem['product_id'],
+                (int) $receiptItem['quantity']
+            );
+        }
     }
 }
