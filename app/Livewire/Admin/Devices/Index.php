@@ -9,6 +9,41 @@ use Livewire\Component;
 
 class Index extends Component
 {
+    public ?int $editingId = null;
+
+    public string $name = '';
+
+    public function startEditing(int $id): void
+    {
+        $device = Device::findOrFail($id);
+
+        $this->editingId = $device->id;
+        $this->name = $device->name;
+
+        $this->resetValidation();
+    }
+
+    public function cancelEditing(): void
+    {
+        $this->editingId = null;
+        $this->name = '';
+
+        $this->resetValidation();
+    }
+
+    public function saveName(): void
+    {
+        $validated = $this->validate([
+            'name' => ['required', 'string', 'max:255'],
+        ]);
+
+        Device::findOrFail($this->editingId)->update([
+            'name' => $validated['name'],
+        ]);
+
+        $this->cancelEditing();
+    }
+
     public function approve(int $id): void
     {
         $device = Device::findOrFail($id);

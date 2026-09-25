@@ -18,7 +18,44 @@
             <tbody class="divide-y divide-line">
             @forelse($devices as $device)
                 <tr class="transition hover:bg-surface-2/40">
-                    <td class="px-4 py-3 font-medium">{{ $device->name }}</td>
+                    <td class="px-4 py-3 font-medium">
+                        @if($editingId === $device->id)
+                            <div class="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    wire:model="name"
+                                    wire:keydown.enter="saveName"
+                                    autofocus
+                                    class="w-40 rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-sm focus:border-accent focus:outline-none"
+                                >
+                                <button
+                                    wire:click="saveName"
+                                    class="rounded-full border border-free/40 px-2.5 py-1 text-xs font-medium text-free transition hover:bg-free/10"
+                                >
+                                    Speichern
+                                </button>
+                                <button
+                                    wire:click="cancelEditing"
+                                    class="rounded-full border border-line px-2.5 py-1 text-xs font-medium text-dim transition hover:border-accent hover:text-accent"
+                                >
+                                    Abbrechen
+                                </button>
+                            </div>
+                            @error('name')
+                                <p class="mt-1 text-xs text-occupied">{{ $message }}</p>
+                            @enderror
+                        @else
+                            <div class="flex items-center gap-2">
+                                {{ $device->name }}
+                                <button
+                                    wire:click="startEditing({{ $device->id }})"
+                                    class="text-xs font-medium text-dim underline decoration-dotted transition hover:text-accent"
+                                >
+                                    Umbenennen
+                                </button>
+                            </div>
+                        @endif
+                    </td>
                     <td class="px-4 py-3 text-dim">{{ $device->platform }}</td>
                     <td class="px-4 py-3">
                         @php
