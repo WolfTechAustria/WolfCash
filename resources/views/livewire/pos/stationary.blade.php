@@ -11,6 +11,7 @@
     <div
         wire:key="pos-stationary-wrapper-{{ $table->id }}"
         x-data="{ cartOpen: false }"
+        x-on:cart-item-added.window="cartOpen = true"
         class="flex min-h-[calc(100dvh-49px)] flex-col lg:flex-row"
     >
 
@@ -169,22 +170,21 @@
             x-transition:leave="transition-opacity ease-in duration-150"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
-            class="fixed inset-0 z-40 bg-black/60 lg:hidden"
+            class="fixed inset-0 z-40 bg-black/60 lg:!hidden"
             @click="cartOpen = false"
         ></div>
 
-        {{-- Warenkorb --}}
+        {{--
+            Warenkorb: bewusst per Klassen-Transform statt x-show gesteuert.
+            Alpines x-show setzt ein inline "display:none", das jede
+            responsive Tailwind-Klasse (hier lg:static/lg:flex) übersticht
+            und den Warenkorb auf großen Bildschirmen/Tablets unsichtbar und
+            unöffenbar machen würde (der einzige Öffnen-Button ist lg:hidden).
+        --}}
         <div
-            x-show="cartOpen"
-            x-cloak
-            x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="translate-y-full"
-            x-transition:enter-end="translate-y-0"
-            x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="translate-y-0"
-            x-transition:leave-end="translate-y-full"
-            class="safe-bottom fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col rounded-t-3xl border-t border-line bg-ink-soft shadow-2xl
-                lg:static lg:flex lg:max-h-none lg:w-96 lg:translate-y-0 lg:rounded-none lg:border-l lg:border-t-0 lg:shadow-none"
+            :class="cartOpen ? 'translate-y-0' : 'translate-y-full'"
+            class="safe-bottom fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col rounded-t-3xl border-t border-line bg-ink-soft shadow-2xl transition-transform duration-200
+                lg:static lg:flex lg:max-h-none lg:w-96 lg:translate-y-0 lg:rounded-none lg:border-l lg:border-t-0 lg:shadow-none lg:transition-none"
             @click.stop
         >
 
