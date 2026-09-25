@@ -31,6 +31,15 @@ class ProductStockChanged implements ShouldBroadcast
     {
     }
 
+    /*
+     * Eigene Queue, damit ein Worker für Live-Signale niemals
+     * Druckjobs mitverarbeitet (und umgekehrt).
+     */
+    public function broadcastQueue(): string
+    {
+        return 'broadcasts';
+    }
+
     public function broadcastOn(): Channel
     {
         return new Channel('stock');
@@ -39,5 +48,13 @@ class ProductStockChanged implements ShouldBroadcast
     public function broadcastAs(): string
     {
         return 'stock.changed';
+    }
+
+    /**
+     * @return array{productIds: array<int, int>}
+     */
+    public function broadcastWith(): array
+    {
+        return ['productIds' => $this->productIds];
     }
 }
