@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\DB;
 class OrderService
 {
     public function __construct(
-        private readonly DailyClosingService $dailyClosingService
+        private readonly DailyClosingService $dailyClosingService,
+        private readonly StockService $stockService,
     ) {
     }
 
@@ -21,6 +22,7 @@ class OrderService
         bool $forceNewOrder = false,
         string $source = Order::SOURCE_POS,
         ?\Closure $onOrderCreated = null,
+        ?string $reservationHolder = null,
     ): Order {
         $this->dailyClosingService->assertOpen(
             today()
@@ -32,10 +34,22 @@ class OrderService
             $printService,
             $forceNewOrder,
             $source,
-            $onOrderCreated
+            $onOrderCreated,
+            $reservationHolder
         ): Order {
             $table = Table::findOrFail(
                 $tableId
+            );
+
+            /*
+             * Bestand endgültig abbuchen und Warenkorb-Reservierungen
+             * auflösen. SelfOrders (forceNewOrder) sind bereits bezahlt,
+             * dort wird bei Überbuchung nur geklemmt statt abgebrochen.
+             */
+            $this->stockService->consume(
+                $cart,
+                $reservationHolder,
+                strict: ! $forceNewOrder,
             );
 
             $order = null;

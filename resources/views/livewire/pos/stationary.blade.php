@@ -93,7 +93,7 @@
 
                 @foreach($products as $product)
 
-                    @if($product->isSoldOut())
+                    @if($product->isSoldOut() || $stock[$product->id] === 0)
 
                         <div
                             wire:key="product-sold-out-{{ $product->id }}"
@@ -365,6 +365,12 @@
                     </span>
 
                 </div>
+
+                @error('cart')
+                <div class="mb-3 rounded-lg bg-occupied-soft px-3 py-2 text-sm text-occupied">
+                    {{ $message }}
+                </div>
+                @enderror
 
                 <button
                     type="button"

@@ -13,6 +13,10 @@ use App\Models\SelfOrder;
 use App\Models\SelfOrderItem;
 use Illuminate\Support\Facades\DB;
 use App\Services\SelfOrderPaymentService;
+use App\Services\StockService;
+use Illuminate\Support\Str;
+use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 
 
 
@@ -36,6 +40,13 @@ class Index extends Component
     public array $cart = [];
 
     public bool $cartOpen = false;
+
+    /*
+     * Eindeutiger Besitzer der Bestandsreservierungen
+     * dieses Gast-Warenkorbs.
+     */
+    #[Locked]
+    public string $cartHolder = '';
 
     public function mount(?string $token = null,?TableOrderSession $tableSession = null): void
     {
@@ -206,17 +217,6 @@ class Index extends Component
             ?? 0
         );
 
-        /*
-         * Begrenzten Bestand berücksichtigen.
-         */
-        if (
-            ! $product->isUnlimited()
-            && $currentQuantity
-            >= (int) $product->available_quantity
-        ) {
-            return;
-        }
-
         if (! isset(
             $this->cart[$productId]
         )) {
@@ -241,7 +241,13 @@ class Index extends Component
             ];
         }
 
-        $this->cart[$productId]['quantity']++;
+        /*
+         * Begrenzten Bestand über die Reservierung berücksichtigen.
+         */
+        $this->setCartQuantity(
+            $productId,
+            $currentQuantity + 1
+        );
     }
 
     public function increaseProduct(
@@ -268,18 +274,10 @@ class Index extends Component
             return;
         }
 
-        $current =
-            (int) $this->cart[$productId]['quantity'];
-
-        if (
-            ! $product->isUnlimited()
-            && $current
-            >= (int) $product->available_quantity
-        ) {
-            return;
-        }
-
-        $this->cart[$productId]['quantity']++;
+        $this->setCartQuantity(
+            $productId,
+            (int) $this->cart[$productId]['quantity'] + 1
+        );
     }
 
     public function removeProduct(
@@ -291,16 +289,58 @@ class Index extends Component
             return;
         }
 
-        $this->cart[$productId]['quantity']--;
+        $this->setCartQuantity(
+            $productId,
+            (int) $this->cart[$productId]['quantity'] - 1
+        );
+    }
 
-        if (
-            $this->cart[$productId]['quantity']
-            <= 0
-        ) {
+    /**
+     * Reserviert die gewünschte Menge und übernimmt die tatsächlich
+     * verfügbare Menge in den Warenkorb.
+     */
+    private function setCartQuantity(
+        int $productId,
+        int $quantity
+    ): void {
+        $stock = app(StockService::class);
+
+        $granted = $stock->reserve(
+            $this->cartHolder(),
+            $productId,
+            $quantity
+        );
+
+        if ($granted <= 0) {
             unset(
                 $this->cart[$productId]
             );
+        } else {
+            $this->cart[$productId]['quantity'] =
+                $granted;
         }
+
+        $stock->touch(
+            $this->cartHolder()
+        );
+    }
+
+    private function cartHolder(): string
+    {
+        if ($this->cartHolder === '') {
+            $this->cartHolder =
+                'self:'.Str::uuid();
+        }
+
+        return $this->cartHolder;
+    }
+
+    /**
+     * Live-Signal: Bestand hat sich geändert, neu rendern.
+     */
+    #[On('echo:stock,.stock.changed')]
+    public function refreshStock(): void
+    {
     }
 
     public function updateNote(
@@ -455,16 +495,23 @@ class Index extends Component
                     }
 
                     /*
-                     * Begrenzten Bestand erneut kontrollieren.
+                     * Begrenzten Bestand erneut kontrollieren,
+                     * abzüglich der Reservierungen anderer Warenkörbe.
                      */
+                    $available = app(StockService::class)
+                        ->availableFor(
+                            $product,
+                            $this->cartHolder()
+                        );
+
                     if (
-                        ! $product->isUnlimited()
-                        && $quantity > (int) $product->available_quantity
+                        $available !== null
+                        && $quantity > $available
                     ) {
                         throw new \RuntimeException(
                             'Von '.$product->name
                             .' sind nur noch '
-                            .$product->available_quantity
+                            .$available
                             .' Stück verfügbar.'
                         );
                     }
@@ -574,6 +621,17 @@ class Index extends Component
                     ]);
                 }
 
+                /*
+                 * Warenkorb-Reservierungen an die eingefrorene
+                 * SelfOrder übergeben, damit sie während der
+                 * Zahlung weiter halten.
+                 */
+                app(StockService::class)
+                    ->transferToSelfOrder(
+                        $this->cartHolder(),
+                        $selfOrder
+                    );
+
                 return $selfOrder;
             });
 
@@ -616,6 +674,23 @@ class Index extends Component
         } catch (\Throwable $exception) {
             report($exception);
 
+            /*
+             * Checkout fehlgeschlagen, der Warenkorb bleibt beim Gast:
+             * Reservierungen wieder dem Warenkorb zuordnen.
+             */
+            if (isset($selfOrder)) {
+                app(StockService::class)->release(
+                    StockService::selfOrderHolder($selfOrder)
+                );
+
+                foreach (array_keys($this->cart) as $productId) {
+                    $this->setCartQuantity(
+                        (int) $productId,
+                        (int) $this->cart[$productId]['quantity']
+                    );
+                }
+            }
+
             $this->addError(
                 'cart',
                 $exception->getMessage()
@@ -628,6 +703,21 @@ class Index extends Component
 
     public function render()
     {
+        $products = $this->activeCategory
+            ? Product::query()
+                ->where(
+                    'product_category_id',
+                    $this->activeCategory
+                )
+                ->where(
+                    'is_active',
+                    true
+                )
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get()
+            : collect();
+
         return view(
             'livewire.self-order.index',
             [
@@ -650,20 +740,15 @@ class Index extends Component
                         : collect(),
 
                 'products' =>
-                    $this->activeCategory
-                        ? Product::query()
-                        ->where(
-                            'product_category_id',
-                            $this->activeCategory
-                        )
-                        ->where(
-                            'is_active',
-                            true
-                        )
-                        ->orderBy('sort_order')
-                        ->orderBy('name')
-                        ->get()
-                        : collect(),
+                    $products,
+
+                /*
+                 * Verbleibender Bestand abzüglich aller
+                 * Warenkorb-Reservierungen (null = unbegrenzt).
+                 */
+                'stock' =>
+                    app(StockService::class)
+                        ->remainingMap($products),
             ]
         )->layout(
             'components.layouts.self-order'

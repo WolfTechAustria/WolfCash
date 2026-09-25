@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pos;
 
+use App\Exceptions\InsufficientStockException;
 use App\Livewire\Pos\Concerns\ManagesProductCart;
 use App\Models\Order;
 use App\Models\Table;
@@ -82,25 +83,32 @@ class StationaryIndex extends Component
             return;
         }
 
-        $orderService->createOrder(
-            tableId: $this->table->id,
-            cart: $this->cart,
-            printService: null,
-            source: Order::SOURCE_STATIONARY,
-            onOrderCreated: fn (Order $order, array $createdItems) =>
-                $printService->createStationaryOrderJob(
-                    $order,
-                    $createdItems,
-                    $this->printIndividually
-                ),
-        );
+        try {
+            $orderService->createOrder(
+                tableId: $this->table->id,
+                cart: $this->cart,
+                printService: null,
+                source: Order::SOURCE_STATIONARY,
+                onOrderCreated: fn (Order $order, array $createdItems) =>
+                    $printService->createStationaryOrderJob(
+                        $order,
+                        $createdItems,
+                        $this->printIndividually
+                    ),
+                reservationHolder: $this->cartHolder(),
+            );
+        } catch (InsufficientStockException $exception) {
+            $this->addError('cart', $exception->getMessage());
+
+            return;
+        }
 
         /*
          * Warenkorb leeren und bestehende Positionen neu laden.
          * Einzeldruck ist bewusst nur für diesen Bonierungsvorgang
          * gültig und wird danach zurückgesetzt.
          */
-        $this->cart = [];
+        $this->releaseCart();
         $this->printIndividually = false;
 
         $this->loadOrderItems();

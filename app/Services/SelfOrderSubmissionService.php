@@ -167,6 +167,7 @@ class SelfOrderSubmissionService
                 $this->printService,
                 forceNewOrder: true,
                 source: Order::SOURCE_SELF_ORDER,
+                reservationHolder: StockService::selfOrderHolder($lockedSelfOrder),
             );
 
             /*

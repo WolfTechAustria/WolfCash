@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\StockService;
 use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
@@ -22,6 +23,19 @@ class Product extends Model
 
     ];
 
+    protected static function booted(): void
+    {
+        /*
+         * Jede Bestandsänderung (Admin, Abbuchung, Storno)
+         * live an die Kassen melden.
+         */
+        static::saved(function (Product $product): void {
+            if ($product->wasRecentlyCreated || $product->wasChanged('available_quantity')) {
+                app(StockService::class)->broadcast([$product->id]);
+            }
+        });
+    }
+
     public function category()
     {
         return $this->belongsTo(ProductCategory::class,'product_category_id');
@@ -30,6 +44,11 @@ class Product extends Model
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function reservations()
+    {
+        return $this->hasMany(ProductReservation::class);
     }
 
     public function isUnlimited(): bool

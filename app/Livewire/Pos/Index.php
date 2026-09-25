@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pos;
 
+use App\Exceptions\InsufficientStockException;
 use App\Livewire\Pos\Concerns\ManagesProductCart;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -57,7 +58,7 @@ class Index extends Component
         $this->selectedTable = $tableId;
 
         $this->cartOpen = false;
-        $this->cart = [];
+        $this->releaseCart();
         $this->orderItems = [];
 
         $order = Order::query()
@@ -88,7 +89,7 @@ class Index extends Component
     {
         $this->cartOpen = false;
         $this->selectedTable = null;
-        $this->cart = [];
+        $this->releaseCart();
         $this->orderItems = [];
     }
 
@@ -188,16 +189,23 @@ class Index extends Component
 
         $tableId = $this->selectedTable;
 
-        $orderService->createOrder(
-            $tableId,
-            $this->cart,
-            $printService
-        );
+        try {
+            $orderService->createOrder(
+                $tableId,
+                $this->cart,
+                $printService,
+                reservationHolder: $this->cartHolder(),
+            );
+        } catch (InsufficientStockException $exception) {
+            $this->addError('cart', $exception->getMessage());
+
+            return;
+        }
 
         /*
          * Warenkorb leeren und bestehende Positionen neu laden.
          */
-        $this->cart = [];
+        $this->releaseCart();
 
         $this->selectTable($tableId);
 

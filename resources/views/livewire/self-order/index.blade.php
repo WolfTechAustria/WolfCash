@@ -141,7 +141,7 @@
 
         @forelse($products as $product)
 
-            @if($product->isSoldOut())
+            @if($product->isSoldOut() || $stock[$product->id] === 0)
 
                 <div
                     wire:key="

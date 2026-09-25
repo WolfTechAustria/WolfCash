@@ -14,7 +14,10 @@ use App\Models\PrintOutput;
 class OrderCancellationService
 {
 
-    public function __construct(private readonly DailyClosingService $dailyClosingService) {
+    public function __construct(
+        private readonly DailyClosingService $dailyClosingService,
+        private readonly StockService $stockService,
+    ) {
     }
 
     public function cancel(OrderItem $item, int $quantity, string $reason, ?int $userId = null): OrderItem
@@ -66,6 +69,14 @@ class OrderCancellationService
                 'cancelled_by' => $userId,
                 'cancellation_reason' => $reason,
             ]);
+
+            /*
+             * Stornierte Menge wieder in den Bestand zurückbuchen.
+             */
+            $this->stockService->restock(
+                $lockedItem->product_id,
+                $quantity
+            );
 
             $cancellation = OrderItemCancellation::create([
                 'order_item_id' => $lockedItem->id,
