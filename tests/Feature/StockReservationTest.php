@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Exceptions\InsufficientStockException;
 use App\Livewire\Pos\Index as PosIndex;
+use App\Livewire\Pos\StationaryIndex;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Printer;
@@ -195,6 +196,22 @@ class StockReservationTest extends TestCase
 
         Livewire::test(PosIndex::class)
             ->call('selectTable', $this->table->id)
+            ->assertDontSeeHtml('title="Noch verfügbar"');
+    }
+
+    public function test_stationary_tile_shows_stock_badge_only_below_twenty(): void
+    {
+        $stationary = Table::create(['number' => 'ST-1', 'name' => 'Kasse 1', 'is_stationary' => true]);
+
+        $this->product(5, 'Knapp');
+
+        Livewire::test(StationaryIndex::class, ['table' => $stationary])
+            ->assertSee('Knapp')
+            ->assertSeeHtml('title="Noch verfügbar"');
+
+        Product::query()->where('name', 'Knapp')->update(['available_quantity' => -1]);
+
+        Livewire::test(StationaryIndex::class, ['table' => $stationary])
             ->assertDontSeeHtml('title="Noch verfügbar"');
     }
 

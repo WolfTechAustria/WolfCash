@@ -89,8 +89,11 @@
 
             </div>
 
-            {{-- Produktkacheln --}}
-            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+            {{-- Produktkacheln, live über Reverb, Polling als Rückfall --}}
+            <div
+                wire:poll.10s
+                class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4"
+            >
 
                 @foreach($products as $product)
 
@@ -111,14 +114,35 @@
 
                     @else
 
+                        @php
+                            /*
+                             * Restbestand erst unter 20 Stück anzeigen,
+                             * unbegrenzte Produkte (null) nie.
+                             */
+                            $showStock = $stock[$product->id] !== null
+                                && $stock[$product->id] < 20;
+                        @endphp
+
                         <button
                             type="button"
                             wire:key="product-{{ $product->id }}"
                             wire:click="addProduct({{ $product->id }})"
                             class="flex h-28 flex-col justify-between rounded-2xl border border-line bg-surface p-3 text-left transition active:scale-[0.97] active:border-accent"
                         >
-                            <span class="text-sm font-medium leading-snug">
-                                {{ $product->name }}
+                            {{-- Name links, Restbestand-Badge rechts oben --}}
+                            <span class="flex items-start justify-between gap-2">
+                                <span class="min-w-0 text-sm font-medium leading-snug">
+                                    {{ $product->name }}
+                                </span>
+
+                                @if($showStock)
+                                    <span
+                                        class="shrink-0 rounded-full bg-occupied-soft px-2 py-0.5 text-xs font-semibold tabular-nums text-occupied"
+                                        title="Noch verfügbar"
+                                    >
+                                        {{ $stock[$product->id] }}
+                                    </span>
+                                @endif
                             </span>
 
                             <span class="font-display text-base font-semibold text-accent">
