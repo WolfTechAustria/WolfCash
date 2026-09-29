@@ -167,6 +167,8 @@
 
                 $paidAmount = (float) $order->payments->sum('amount');
 
+                $origins = $order->items->map->origin_label->filter()->unique()->values();
+
                 $statusBadge = match($order->status) {
                     'paid' => [
                         'bg-free/15 text-free',
@@ -208,6 +210,12 @@
                             ·
                             {{ $order->created_at->format('d.m.Y H:i') }}
                         </p>
+
+                        @if($origins->isNotEmpty())
+                            <p class="mt-0.5 text-xs text-dim">
+                                Gerät: {{ $origins->join(', ') }}
+                            </p>
+                        @endif
                     </div>
 
                     <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium {{ $statusBadge[0] }}">
@@ -311,6 +319,10 @@
                 </th>
 
                 <th class="px-4 py-3 text-left font-medium">
+                    Gerät
+                </th>
+
+                <th class="px-4 py-3 text-left font-medium">
                     Status
                 </th>
 
@@ -359,6 +371,8 @@
 
                     $paidAmount = (float) $order->payments->sum('amount');
 
+                $origins = $order->items->map->origin_label->filter()->unique()->values();
+
                     $statusBadge = match($order->status) {
                         'paid' => [
                             'bg-free/15 text-free',
@@ -403,6 +417,16 @@
 
                     <td class="px-4 py-3">
                         Tisch {{ $order->table?->number ?? '–' }}
+                    </td>
+
+                    <td class="px-4 py-3 text-dim">
+                        @if($origins->isEmpty())
+                            –
+                        @else
+                            <span title="{{ $origins->join(', ') }}">
+                                {{ $origins->first() }}@if($origins->count() > 1) <span class="text-xs">+{{ $origins->count() - 1 }}</span>@endif
+                            </span>
+                        @endif
                     </td>
 
                     <td class="px-4 py-3">
@@ -465,7 +489,7 @@
 
                 <tr>
                     <td
-                        colspan="10"
+                        colspan="11"
                         class="px-4 py-10 text-center text-dim"
                     >
                         Keine Bestellungen für den gewählten Filter gefunden.

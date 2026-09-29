@@ -15,6 +15,15 @@ class PrintService
     {
         $jobsByStation = [];
 
+        /*
+         * Alle Positionen eines Bonierungsvorgangs stammen vom selben
+         * Gerät. Der Name wird als Snapshot mitgegeben, damit spätere
+         * Umbenennungen alte Bons nicht verändern.
+         */
+        $origin = isset($orderItems[0])
+            ? $orderItems[0]->origin_label
+            : null;
+
         foreach ($orderItems as $orderItem) {
             $product = $orderItem->product()
                 ->with([
@@ -81,6 +90,7 @@ class PrintService
                 'payload' => [
                     'order_id' => $order->id,
                     'table' => $order->table?->number,
+                    'origin' => $origin,
                     'items' => $jobData['items'],
                 ],
             ]);

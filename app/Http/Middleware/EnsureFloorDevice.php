@@ -40,7 +40,7 @@ class EnsureFloorDevice
             return $next($request);
         }
 
-        $device = $this->resolveDevice($request);
+        $device = self::resolveDevice($request);
 
         if ($device?->status === DeviceStatus::Approved) {
             $device->forceFill(['last_seen_at' => now()])->saveQuietly();
@@ -73,14 +73,20 @@ class EnsureFloorDevice
         ], 403);
     }
 
-    private function resolveDevice(Request $request): ?Device
+    /**
+     * Auch außerhalb der Middleware genutzt, um Buchungen dem
+     * bedienenden Gerät zuzuordnen.
+     */
+    public static function resolveDevice(Request $request): ?Device
     {
         /*
          * Mobile-App: freigegebenes Gerät wurde beim Session-Aufbau
          * geprüft, der Status wird hier trotzdem jedes Mal neu gelesen,
          * damit eine spätere Sperre sofort greift.
          */
-        $mobileDeviceId = $request->session()->get('mobile_device_id');
+        $mobileDeviceId = $request->hasSession()
+            ? $request->session()->get('mobile_device_id')
+            : null;
 
         if ($mobileDeviceId) {
             return Device::find($mobileDeviceId);
