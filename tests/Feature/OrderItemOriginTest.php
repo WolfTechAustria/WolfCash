@@ -21,6 +21,7 @@ use App\Models\ProductionStation;
 use App\Models\Setting;
 use App\Models\Table;
 use App\Models\User;
+use App\Printing\PrintLine;
 use App\Printing\ProductionTicketRenderer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -80,6 +81,18 @@ class OrderItemOriginTest extends TestCase
         $lines = app(ProductionTicketRenderer::class)->render($job)[0]->lines;
 
         $this->assertContains('Von: Kellner Anna', $lines);
+
+        // Tisch mittig und fett, Artikel fett, der Rest bleibt normal.
+        $table = $lines[0];
+        $this->assertInstanceOf(PrintLine::class, $table);
+        $this->assertSame('TISCH 4', $table->text);
+        $this->assertTrue($table->bold);
+        $this->assertTrue($table->center);
+
+        $article = collect($lines)->first(fn ($line) => (string) $line === '1x Gulasch');
+        $this->assertInstanceOf(PrintLine::class, $article);
+        $this->assertTrue($article->bold);
+        $this->assertFalse($article->center);
 
         $this->actingAs(User::factory()->create());
 

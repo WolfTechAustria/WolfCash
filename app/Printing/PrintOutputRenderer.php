@@ -59,7 +59,7 @@ class PrintOutputRenderer
             ?? $output->orderItem?->note;
 
         $lines = [
-            'TISCH '.$tableNumber,
+            PrintLine::boldCentered('TISCH '.$tableNumber),
         ];
 
         if ($output->printJob->productionStation) {
@@ -81,7 +81,7 @@ class PrintOutputRenderer
 
         $lines[] = str_repeat('-', 32);
 
-        $lines[] = $quantity.'x '.$name;
+        $lines[] = PrintLine::bold($quantity.'x '.$name);
 
         if ($note) {
             $lines[] = '  > '.$note;
@@ -132,7 +132,7 @@ class PrintOutputRenderer
         $lines = [
             '*** STORNO ***',
             '',
-            'TISCH '.$tableNumber,
+            PrintLine::boldCentered('TISCH '.$tableNumber),
         ];
 
         if ($output->printJob->productionStation) {
@@ -146,7 +146,7 @@ class PrintOutputRenderer
 
         $lines[] = str_repeat('=', 32);
 
-        $lines[] = $quantity.'x '.$name;
+        $lines[] = PrintLine::bold($quantity.'x '.$name);
 
         if ($note) {
             $lines[] = '  > '.$note;
