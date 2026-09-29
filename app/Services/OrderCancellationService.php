@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
+use App\Models\Table;
+use App\Support\RowLock;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use App\Models\OrderItemCancellation;
@@ -45,6 +47,10 @@ class OrderCancellationService
             $reason,
             $userId
         ): OrderItem {
+            Table::lockForBooking(
+                (int) Order::query()->whereKey($item->order_id)->value('table_id')
+            );
+
             $lockedItem = OrderItem::query()
                 ->lockForUpdate()
                 ->findOrFail($item->id);
@@ -96,13 +102,12 @@ class OrderCancellationService
                 cancellation: $cancellation,
             );
 
-            $order = Order::query()
-                ->lockForUpdate()
+            $order = RowLock::forUpdate(Order::query())
                 ->findOrFail($lockedItem->order_id);
 
             $order->recalculateTotal();
 
-            $this->closeOrderIfSettled($order);
+            $order->closeIfSettled();
 
             return $lockedItem->fresh([
                 'product',
@@ -206,39 +211,5 @@ class OrderCancellationService
             ProcessPrintOutput::dispatch($output->id)
                 ->afterCommit();
         }
-    }
-
-    private function closeOrderIfSettled(Order $order): void
-    {
-        $openAmount = (float) $order->items()
-            ->whereNull('paid_at')
-            ->selectRaw(
-                'COALESCE(SUM((quantity - cancelled_quantity) * price), 0) AS open_amount'
-            )
-            ->value('open_amount');
-
-        if ($openAmount > 0.009) {
-            return;
-        }
-
-        /*
-         * Gab es bereits Zahlungen, wurde die Bestellung regulär
-         * abgerechnet und der verbleibende Rest anschließend storniert.
-         *
-         * Ohne Zahlung handelt es sich um ein vollständiges Storno.
-         */
-        $status = $order->payments()->exists()
-            ? Order::STATUS_PAID
-            : Order::STATUS_CANCELLED;
-
-        $order->update([
-            'status' => $status,
-        ]);
-
-        $order->table()
-            ->lockForUpdate()
-            ->update([
-                'status' => 'free',
-            ]);
     }
 }

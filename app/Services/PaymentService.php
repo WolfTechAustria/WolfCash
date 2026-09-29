@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
+use App\Models\Table;
 use Illuminate\Support\Facades\DB;
 
 class PaymentService
@@ -37,6 +38,8 @@ class PaymentService
             $method,
             $invoiceRecipient
         ): ?Payment {
+            Table::lockForBooking($order->table_id);
+
             $amount = 0.0;
             $receiptItems = [];
             $paidItemIds = [];
@@ -167,6 +170,8 @@ class PaymentService
                 items: $receiptItems,
             );
 
+            $order->refresh()->closeIfSettled();
+
             return $payment;
         });
     }
@@ -189,6 +194,8 @@ class PaymentService
             $method,
             $invoiceRecipient
         ): ?Payment {
+            Table::lockForBooking($order->table_id);
+
             $openItems = $order->items()
                 ->with('product')
                 ->whereNull('paid_at')
@@ -254,6 +261,8 @@ class PaymentService
                 items: $receiptItems,
             );
 
+            $order->refresh()->closeIfSettled();
+
             return $payment;
         });
     }
@@ -280,11 +289,20 @@ class PaymentService
             return;
         }
 
+        // Nach Produkt-ID sortiert sperren, wie StockService::consume, sonst drohen Deadlocks.
+        $quantities = [];
+
         foreach ($receiptItems as $receiptItem) {
-            $this->stockService->restock(
-                $receiptItem['product_id'],
-                (int) $receiptItem['quantity']
-            );
+            if ($receiptItem['product_id'] !== null) {
+                $quantities[$receiptItem['product_id']] =
+                    ($quantities[$receiptItem['product_id']] ?? 0) + (int) $receiptItem['quantity'];
+            }
+        }
+
+        ksort($quantities);
+
+        foreach ($quantities as $productId => $quantity) {
+            $this->stockService->restock($productId, $quantity);
         }
     }
 }

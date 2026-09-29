@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\TableOrderSession;
+use App\Support\RowLock;
 
 class Table extends Model
 {
@@ -25,6 +26,17 @@ class Table extends Model
             'self_order_enabled' => 'boolean',
             'is_stationary' => 'boolean',
         ];
+    }
+
+    /**
+     * Sperrt den Tisch für Bonieren, Kassieren und Storno, damit parallele
+     * Kassen am selben Tisch nacheinander statt gegeneinander laufen.
+     * Nur innerhalb einer Transaktion und immer als erste Sperre.
+     */
+    public static function lockForBooking(int $tableId): self
+    {
+        return RowLock::forUpdate(static::query()->whereKey($tableId))
+            ->firstOrFail();
     }
 
     /*
