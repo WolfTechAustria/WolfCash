@@ -23,6 +23,8 @@ class OrderService
         string $source = Order::SOURCE_POS,
         ?\Closure $onOrderCreated = null,
         ?string $reservationHolder = null,
+        ?int $deviceId = null,
+        ?int $userId = null,
     ): Order {
         $this->dailyClosingService->assertOpen(
             today()
@@ -35,7 +37,9 @@ class OrderService
             $forceNewOrder,
             $source,
             $onOrderCreated,
-            $reservationHolder
+            $reservationHolder,
+            $deviceId,
+            $userId
         ): Order {
             /*
              * Erst den Tisch sperren: Zwei Kellner am selben Tisch dürfen
@@ -124,6 +128,12 @@ class OrderService
                     'paid_at' =>
                         $item['paid_at']
                         ?? null,
+
+                    'device_id' =>
+                        $deviceId,
+
+                    'user_id' =>
+                        $userId,
 
                     'status' =>
                         OrderItem::STATUS_PENDING,

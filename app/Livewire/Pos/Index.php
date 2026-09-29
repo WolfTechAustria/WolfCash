@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pos;
 
+use App\Http\Middleware\EnsureFloorDevice;
 use App\Exceptions\InsufficientStockException;
 use App\Livewire\Pos\Concerns\ManagesProductCart;
 use App\Models\Order;
@@ -195,6 +196,8 @@ class Index extends Component
                 $this->cart,
                 $printService,
                 reservationHolder: $this->cartHolder(),
+                deviceId: EnsureFloorDevice::resolveDevice(request())?->id,
+                userId: auth()->id(),
             );
         } catch (InsufficientStockException $exception) {
             $this->addError('cart', $exception->getMessage());

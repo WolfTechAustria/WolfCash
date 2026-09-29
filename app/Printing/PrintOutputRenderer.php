@@ -71,6 +71,14 @@ class PrintOutputRenderer
         $lines[] = $output->created_at
             ->format('d.m.Y H:i');
 
+        $origin = $payload['origin']
+            ?? $output->printJob->payload['origin']
+            ?? null;
+
+        if ($origin) {
+            $lines[] = 'Von: '.$origin;
+        }
+
         $lines[] = str_repeat('-', 32);
 
         $lines[] = $quantity.'x '.$name;

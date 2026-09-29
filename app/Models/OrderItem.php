@@ -16,6 +16,8 @@ class OrderItem extends Model
         'note',
         'paid_at',
         'payment_id',
+        'device_id',
+        'user_id',
         'production_status',
         'production_completed_quantity',
         'production_printed_quantity',
@@ -48,6 +50,43 @@ class OrderItem extends Model
     public function payment(): BelongsTo
     {
         return $this->belongsTo(Payment::class);
+    }
+
+    /**
+     * Gerät, von dem die Position boniert wurde.
+     */
+    public function device(): BelongsTo
+    {
+        return $this->belongsTo(Device::class);
+    }
+
+    /**
+     * Angemeldeter Benutzer (z. B. Admin über "Kasse öffnen").
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Anzeigename der Herkunft: Gerät, sonst Benutzer, sonst
+     * Self Order. Null bei Altdaten ohne Zuordnung.
+     */
+    public function getOriginLabelAttribute(): ?string
+    {
+        if ($this->device) {
+            return $this->device->name;
+        }
+
+        if ($this->user) {
+            return $this->user->name;
+        }
+
+        if ($this->order?->source === Order::SOURCE_SELF_ORDER) {
+            return 'Self Order';
+        }
+
+        return null;
     }
 
     protected function casts(): array {

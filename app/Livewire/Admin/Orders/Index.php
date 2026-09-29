@@ -52,6 +52,8 @@ class Index extends Component
             ->with([
                 'table',
                 'items.product',
+                'items.device',
+                'items.user',
                 'payments',
             ])
             ->withCount('items')

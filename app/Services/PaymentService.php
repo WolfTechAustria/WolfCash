@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Middleware\EnsureFloorDevice;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
@@ -156,6 +157,7 @@ class PaymentService
                 'order_id' => $order->id,
                 'amount' => round($amount, 2),
                 'payment_method' => $method,
+                'device_id' => EnsureFloorDevice::resolveDevice(request())?->id,
                 'user_id' => auth()->id(),
                 'invoice_recipient_name' => $invoiceRecipient['name'] ?? null,
                 'invoice_recipient_address' => $invoiceRecipient['address'] ?? null,
@@ -247,6 +249,7 @@ class PaymentService
                 'order_id' => $order->id,
                 'amount' => round($amount, 2),
                 'payment_method' => $method,
+                'device_id' => EnsureFloorDevice::resolveDevice(request())?->id,
                 'user_id' => auth()->id(),
                 'invoice_recipient_name' => $invoiceRecipient['name'] ?? null,
                 'invoice_recipient_address' => $invoiceRecipient['address'] ?? null,

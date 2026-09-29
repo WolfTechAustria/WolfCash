@@ -18,10 +18,18 @@
                     Bestellung #{{ $order->id }}
                 </h1>
 
+                @php
+                    $origins = $order->items->map->origin_label->filter()->unique()->values();
+                @endphp
+
                 <p class="mt-0.5 text-sm text-dim">
                     Tisch {{ $order->table?->number ?? '–' }}
                     ·
                     {{ $order->created_at->format('d.m.Y H:i') }}
+                    @if($origins->isNotEmpty())
+                        ·
+                        {{ $origins->count() === 1 ? 'Gerät' : 'Geräte' }}: {{ $origins->join(', ') }}
+                    @endif
                 </p>
             </div>
 
@@ -206,6 +214,11 @@
 
                                 <p class="mt-1 text-xs text-dim">
                                     Position #{{ $item->id }}
+                                    ·
+                                    {{ $item->created_at->format('H:i') }}
+                                    @if($item->origin_label)
+                                        · {{ $item->origin_label }}
+                                    @endif
                                 </p>
 
                             </div>
@@ -504,6 +517,9 @@
                                     Zahlung #{{ $payment->id }}
                                     ·
                                     {{ $payment->created_at->format('d.m.Y H:i') }}
+                                    @if($payment->device || $payment->user)
+                                        · {{ $payment->device?->name ?? $payment->user->name }}
+                                    @endif
                                 </p>
 
                                 @if($receiptJob)

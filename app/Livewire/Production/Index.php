@@ -343,6 +343,7 @@ class Index extends Component
                             'status' => PrintOutput::STATUS_PENDING,
                             'payload' => [
                                 'table' => $job->payload['table'] ?? null,
+                                'origin' => $job->payload['origin'] ?? null,
                                 'name' => $payloadItem['name']
                                     ?? $item->product?->name
                                         ?? 'Unbekanntes Produkt',
@@ -380,6 +381,7 @@ class Index extends Component
                     'status' => PrintOutput::STATUS_PENDING,
                     'payload' => [
                         'table' => $job->payload['table'] ?? null,
+                        'origin' => $job->payload['origin'] ?? null,
                         'name' => $payloadItem['name']
                             ?? $item->product?->name
                                 ?? 'Unbekanntes Produkt',

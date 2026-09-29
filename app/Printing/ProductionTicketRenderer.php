@@ -363,6 +363,10 @@ class ProductionTicketRenderer
         $lines[] = $job->created_at
             ->format('d.m.Y H:i');
 
+        if (! empty($job->payload['origin'])) {
+            $lines[] = 'Von: '.$job->payload['origin'];
+        }
+
         $lines[] = str_repeat('-', 32);
 
         return $lines;

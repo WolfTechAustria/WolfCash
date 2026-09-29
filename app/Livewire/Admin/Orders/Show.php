@@ -33,6 +33,10 @@ class Show extends Component
 
             'items.product',
 
+            'items.device',
+
+            'items.user',
+
             'items.cancellations.cancelledByUser',
 
             /*
@@ -40,6 +44,10 @@ class Show extends Component
              * für die Statusanzeige und Nachdruckzählung.
              */
             'payments.receiptPrintJob.outputs',
+
+            'payments.device',
+
+            'payments.user',
         ]);
     }
 
