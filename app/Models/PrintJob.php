@@ -72,4 +72,68 @@ class PrintJob extends Model
     {
         return $this->hasMany(PrintOutput::class);
     }
+
+    /**
+     * Status aus den Einzelausdrucken ableiten.
+     *
+     * Zahlungsbelege und Produktionsbons mit Auslöser "pro Position"
+     * werden nicht über ProcessPrintJob, sondern als PrintOutputs
+     * gedruckt. Ohne diesen Abgleich bliebe der Job auf "pending".
+     * Stornobons hängen am Originaljob und zählen hier nicht mit.
+     */
+    public function syncStatusFromOutputs(): void
+    {
+        $outputs = $this->outputs()
+            ->where('type', '!=', PrintOutput::TYPE_CANCELLATION)
+            ->get();
+
+        if ($outputs->isEmpty()) {
+            return;
+        }
+
+        $printed = $outputs->where('status', PrintOutput::STATUS_PRINTED);
+        $failed = $outputs->where('status', PrintOutput::STATUS_FAILED);
+
+        $open = $outputs->whereIn('status', [
+            PrintOutput::STATUS_PENDING,
+            PrintOutput::STATUS_PRINTING,
+        ]);
+
+        /*
+         * Beleg: ein erfolgreicher Ausdruck genügt, ein später
+         * fehlgeschlagener Nachdruck macht ihn nicht ungültig.
+         * Produktion: erst wenn alles fertig und gedruckt ist.
+         */
+        $complete = $this->type === self::TYPE_RECEIPT
+            ? $printed->isNotEmpty()
+            : $this->production_completed_at !== null
+                && $failed->isEmpty()
+                && $open->isEmpty();
+
+        if ($complete) {
+            $this->update([
+                'status' => self::STATUS_PRINTED,
+                'printed_at' => $printed->max('printed_at') ?? now(),
+                'error_message' => null,
+            ]);
+
+            return;
+        }
+
+        if ($failed->isNotEmpty()) {
+            $this->update([
+                'status' => self::STATUS_FAILED,
+                'error_message' => $failed->sortByDesc('updated_at')->first()->error_message,
+            ]);
+
+            return;
+        }
+
+        $this->update([
+            'status' => $outputs->contains('status', PrintOutput::STATUS_PRINTING)
+                ? self::STATUS_PRINTING
+                : self::STATUS_PENDING,
+            'error_message' => null,
+        ]);
+    }
 }

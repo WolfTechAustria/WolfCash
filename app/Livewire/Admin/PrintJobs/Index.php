@@ -2,7 +2,10 @@
 
 namespace App\Livewire\Admin\PrintJobs;
 
+use App\Jobs\ProcessPrintJob;
+use App\Jobs\ProcessPrintOutput;
 use App\Models\PrintJob;
+use App\Models\PrintOutput;
 use App\Printing\PrintJobPreview;
 use Livewire\Component;
 use Throwable;
@@ -58,6 +61,42 @@ class Index extends Component
             'printed_at' => null,
             'error_message' => null,
         ]);
+
+        /*
+         * Belege und Bons mit Auslöser "pro Position" laufen über
+         * Einzelausdrucke: fehlgeschlagene erneut einreihen.
+         */
+        $failedOutputs = $job->outputs()
+            ->where('type', '!=', PrintOutput::TYPE_CANCELLATION)
+            ->where('status', PrintOutput::STATUS_FAILED)
+            ->get();
+
+        if ($failedOutputs->isNotEmpty()) {
+            foreach ($failedOutputs as $output) {
+                $output->update([
+                    'status' => PrintOutput::STATUS_PENDING,
+                    'error_message' => null,
+                ]);
+
+                ProcessPrintOutput::dispatch($output->id);
+            }
+
+            return;
+        }
+
+        if ($job->outputs()->where('type', '!=', PrintOutput::TYPE_CANCELLATION)->exists()) {
+            $job->syncStatusFromOutputs();
+
+            return;
+        }
+
+        /*
+         * Noch nicht freigegebene Produktionsbons warten weiter auf
+         * den Küchenmonitor, alles andere direkt neu drucken.
+         */
+        if ($job->ready_to_print) {
+            ProcessPrintJob::dispatch($job->id);
+        }
     }
 
     public function render(PrintJobPreview $preview)
