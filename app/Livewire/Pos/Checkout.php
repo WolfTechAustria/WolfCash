@@ -191,17 +191,7 @@ class Checkout extends Component
             return;
         }
 
-        /*
-         * Auch bei einer Teilzahlung merken wir uns sofort
-         * die konkrete Zahlung.
-         */
-        $this->lastPayment = $payment;
-
-        $this->selectedForPayment = [];
-
-        $this->loadOrder();
-
-        $this->closeOrderIfFullyPaid();
+        $this->afterPayment($payment);
     }
 
     public function payOpen(
@@ -227,13 +217,33 @@ class Checkout extends Component
             return;
         }
 
+        $this->afterPayment($payment);
+    }
+
+    /**
+     * Ob die Bestellung damit abgeschlossen ist, entscheidet der
+     * PaymentService unter Tischsperre; hier wird nur das Ergebnis
+     * übernommen. Die bezahlte Bestellung bleibt geladen, damit der
+     * Beleg auf dem Erfolgsbildschirm noch gedruckt werden kann.
+     */
+    private function afterPayment(Payment $payment): void
+    {
         $this->lastPayment = $payment;
 
         $this->selectedForPayment = [];
 
-        $this->loadOrder();
+        $order = Order::query()
+            ->with(['items.product', 'payments'])
+            ->find($payment->order_id);
 
-        $this->closeOrderIfFullyPaid();
+        if ($order?->status === Order::STATUS_PAID) {
+            $this->order = $order;
+            $this->paymentFinished = true;
+
+            return;
+        }
+
+        $this->loadOrder();
     }
 
     /**
@@ -556,33 +566,6 @@ class Checkout extends Component
         $this->pendingCardSelection = [];
         $this->pendingCardAmount = null;
         $this->pendingCardMode = null;
-    }
-
-    private function closeOrderIfFullyPaid(): void
-    {
-        if (! $this->order) {
-            return;
-        }
-
-        /*
-         * Nicht anhand der Anzahl der Datensätze prüfen.
-         * Vollständig stornierte, unbezahlte Datensätze dürfen
-         * das Schließen der Bestellung nicht verhindern.
-         */
-        if ($this->openAmount > 0.009) {
-            return;
-        }
-
-        $this->order->update([
-            'status' => Order::STATUS_PAID,
-        ]);
-
-        $this->table->update([
-            'status' => 'free',
-        ]);
-
-
-        $this->paymentFinished = true;
     }
 
     public function backToPos()

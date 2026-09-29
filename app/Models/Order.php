@@ -56,4 +56,44 @@ class Order extends Model
             'total' => $total,
         ]);
     }
+
+    /**
+     * Schließt die Bestellung, sobald keine unbezahlte Menge mehr offen
+     * ist, und gibt den Tisch frei. Anhand der Datenbank statt geladener
+     * Daten geprüft und nur unter gesperrtem Tisch aufrufen (siehe
+     * Table::lockForBooking), sonst übersehen parallele Kassen einander.
+     */
+    public function closeIfSettled(): bool
+    {
+        if ($this->status !== self::STATUS_OPEN) {
+            return false;
+        }
+
+        $openAmount = (float) $this->items()
+            ->whereNull('paid_at')
+            ->selectRaw(
+                'COALESCE(SUM((quantity - cancelled_quantity) * price), 0) AS open_amount'
+            )
+            ->value('open_amount');
+
+        if ($openAmount > 0.009) {
+            return false;
+        }
+
+        /*
+         * Mit Zahlungen regulär abgerechnet (Rest ggf. storniert),
+         * ohne Zahlung ein vollständiges Storno.
+         */
+        $this->update([
+            'status' => $this->payments()->exists()
+                ? self::STATUS_PAID
+                : self::STATUS_CANCELLED,
+        ]);
+
+        $this->table()->update([
+            'status' => 'free',
+        ]);
+
+        return true;
+    }
 }

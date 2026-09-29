@@ -7,6 +7,7 @@ use App\Exceptions\InsufficientStockException;
 use App\Models\Product;
 use App\Models\ProductReservation;
 use App\Models\SelfOrder;
+use App\Support\RowLock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -83,9 +84,7 @@ class StockService
         $quantity = max(0, $quantity);
 
         $granted = DB::transaction(function () use ($holder, $productId, $quantity): int {
-            $product = Product::query()
-                ->whereKey($productId)
-                ->lockForUpdate()
+            $product = RowLock::forUpdate(Product::query()->whereKey($productId))
                 ->first();
 
             if (! $product) {
@@ -206,10 +205,11 @@ class StockService
          */
         ksort($quantities);
 
-        $products = Product::query()
-            ->whereIn('id', array_keys($quantities))
-            ->orderBy('id')
-            ->lockForUpdate()
+        $products = RowLock::forUpdate(
+            Product::query()
+                ->whereIn('id', array_keys($quantities))
+                ->orderBy('id')
+        )
             ->get()
             ->keyBy('id');
 
@@ -263,9 +263,7 @@ class StockService
             return;
         }
 
-        $product = Product::query()
-            ->whereKey($productId)
-            ->lockForUpdate()
+        $product = RowLock::forUpdate(Product::query()->whereKey($productId))
             ->first();
 
         if (! $product || $product->isUnlimited()) {

@@ -37,9 +37,12 @@ class OrderService
             $onOrderCreated,
             $reservationHolder
         ): Order {
-            $table = Table::findOrFail(
-                $tableId
-            );
+            /*
+             * Erst den Tisch sperren: Zwei Kellner am selben Tisch dürfen
+             * keine zweite offene Bestellung anlegen und nicht in eine
+             * Bestellung buchen, die gerade abkassiert wird.
+             */
+            $table = Table::lockForBooking($tableId);
 
             /*
              * Bestand endgültig abbuchen und Warenkorb-Reservierungen
