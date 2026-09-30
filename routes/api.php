@@ -1,9 +1,22 @@
 <?php
 
 use App\Http\Controllers\Api\DeviceController;
+use App\Http\Controllers\Api\DiscoveryController;
 use App\Http\Controllers\Api\MobileSessionController;
 use App\Http\Controllers\Api\StripeTerminalController;
 use Illuminate\Support\Facades\Route;
+
+
+/*
+|--------------------------------------------------------------------------
+| Server Discovery
+|--------------------------------------------------------------------------
+*/
+
+Route::post(
+    '/discovery/identify',
+    [DiscoveryController::class, 'identify']
+)->middleware('throttle:30,1');
 
 
 /*

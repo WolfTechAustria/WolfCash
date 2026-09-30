@@ -34,15 +34,32 @@ class MobileSessionController extends Controller
             'expires_at' => now()->addMinutes(2),
         ]);
 
-        $baseUrl = rtrim(
-            config('app.mobile_web_url'),
-            '/'
-        );
-
         return response()->json([
-            'url' => $baseUrl
+            'url' => $this->webBaseUrl($request)
                 .'/mobile/session/'
                 .$sessionCode->code,
         ]);
+    }
+
+    /**
+     * Geräte, die den Server über das lokale Netz erreichen
+     * (Autodiscovery), sollen auch die Kasse lokal laden.
+     */
+    private function webBaseUrl(Request $request): string
+    {
+        $host = $request->getHost();
+
+        $isPrivateIp =
+            filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false
+            && filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE) === false;
+
+        if ($isPrivateIp) {
+            return $request->getSchemeAndHttpHost();
+        }
+
+        return rtrim(
+            config('app.mobile_web_url'),
+            '/'
+        );
     }
 }

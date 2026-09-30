@@ -2,8 +2,10 @@
 
 namespace App\Livewire\Admin\Settings;
 
+use App\Models\ActivityLog;
 use App\Models\Printer;
 use App\Models\Setting;
+use App\Services\ActivityLogger;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -108,6 +110,8 @@ class Index extends Component
             ],
         ]);
 
+        $before = Setting::query()->pluck('value', 'key');
+
         Setting::putValue(
             Setting::RECEIPT_AUTOMATIC_PRINTING_ENABLED,
             $this->automaticReceiptPrintingEnabled
@@ -164,6 +168,22 @@ class Index extends Component
             Setting::STATIONARY_PRINTER_ID,
             $this->stationaryPrinterId
         );
+
+        $changes = Setting::query()
+            ->pluck('value', 'key')
+            ->filter(fn (?string $value, string $key) => $before->get($key) !== $value)
+            ->map(fn (?string $value, string $key) => [
+                'old' => $before->get($key),
+                'new' => $value,
+            ]);
+
+        if ($changes->isNotEmpty()) {
+            app(ActivityLogger::class)->log(
+                ActivityLog::SETTINGS_UPDATED,
+                'Einstellungen geändert: '.$changes->keys()->implode(', '),
+                properties: ['changes' => $changes->all()],
+            );
+        }
 
         session()->flash(
             'settingsSaved',

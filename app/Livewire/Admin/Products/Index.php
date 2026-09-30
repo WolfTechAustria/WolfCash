@@ -3,8 +3,10 @@
 namespace App\Livewire\Admin\Products;
 
 use Livewire\Component;
+use App\Models\ActivityLog;
 use App\Models\Product;
 use App\Models\ProductCategory;
+use App\Services\ActivityLogger;
 
 class Index extends Component
 {
@@ -55,12 +57,26 @@ class Index extends Component
         ];
 
         if ($this->editingId) {
-            Product::findOrFail($this->editingId)->update($data);
+            $product = Product::findOrFail($this->editingId);
+            $product->update($data);
+
+            $this->logChanges($product);
         } else {
             $data['sort_order'] = (int) Product::where('product_category_id', $this->product_category_id)
                 ->max('sort_order') + 1;
 
-            Product::create($data);
+            $product = Product::create($data);
+
+            app(ActivityLogger::class)->log(
+                ActivityLog::PRODUCT_CREATED,
+                sprintf(
+                    'Produkt „%s“ angelegt (%s €)',
+                    $product->name,
+                    number_format((float) $product->price, 2, ',', '.')
+                ),
+                $product,
+                ['attributes' => $data],
+            );
         }
 
         $this->reset([
@@ -87,7 +103,15 @@ class Index extends Component
 
     public function delete(int $id)
     {
-        Product::findOrFail($id)->delete();
+        $product = Product::findOrFail($id);
+        $product->delete();
+
+        app(ActivityLogger::class)->log(
+            ActivityLog::PRODUCT_DELETED,
+            "Produkt „{$product->name}“ gelöscht",
+            $product,
+            ['price' => (float) $product->price],
+        );
     }
 
     public function toggleActive(int $id): void
@@ -97,6 +121,33 @@ class Index extends Component
         $product->update([
             'is_active' => ! $product->is_active,
         ]);
+
+        $this->logChanges($product);
+    }
+
+    /**
+     * Nur tatsächlich geänderte Felder mit altem und neuem Wert,
+     * damit z. B. Preisänderungen nachvollziehbar bleiben.
+     */
+    private function logChanges(Product $product): void
+    {
+        $changes = collect($product->getChanges())
+            ->except(['updated_at'])
+            ->map(fn (mixed $value, string $key) => [
+                'old' => $product->getPrevious()[$key] ?? null,
+                'new' => $value,
+            ]);
+
+        if ($changes->isEmpty()) {
+            return;
+        }
+
+        app(ActivityLogger::class)->log(
+            ActivityLog::PRODUCT_UPDATED,
+            "Produkt „{$product->name}“ geändert: ".$changes->keys()->implode(', '),
+            $product,
+            ['changes' => $changes->all()],
+        );
     }
 
     public function edit(int $id): void

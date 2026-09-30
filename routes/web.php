@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Livewire\Admin\Dashboard\Index as DashboardIndex;
 use App\Livewire\Admin\Devices\Index as DevicesIndex;
 use App\Livewire\Pos\Index as PosIndex;
 use App\Livewire\Pos\StationaryIndex;
@@ -22,6 +23,7 @@ use App\Livewire\Admin\DailyClosings\Show as DailyClosingShow;
 use App\Livewire\Admin\ProductReports\Index as ProductReportsIndex;
 use App\Livewire\Admin\Settings\Index as SettingsIndex;
 use App\Livewire\Admin\SystemReset\Index as SystemResetIndex;
+use App\Livewire\Admin\ActivityLog\Index as ActivityLogIndex;
 use App\Http\Controllers\MobileWebSessionController;
 use App\Livewire\SelfOrder\Index as SelfOrderIndex;
 use App\Http\Controllers\SelfOrderPaymentController;
@@ -129,7 +131,7 @@ Route::get(
 
 Route::middleware('auth')->group(function () {
 
-    Route::view('/dashboard', 'dashboard')->name('dashboard');
+    Route::get('/dashboard', DashboardIndex::class)->name('dashboard');
 
     /*
     |--------------------------------------------------------------------------
@@ -139,7 +141,7 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('admin')->group(function () {
 
-        Route::view('/', 'admin.dashboard')->name('admin.dashboard');
+        Route::get('/', DashboardIndex::class)->name('admin.dashboard');
 
             // Device Management (Livewire)
             Route::get('/devices', DevicesIndex::class)
@@ -208,6 +210,10 @@ Route::middleware('auth')->group(function () {
             //Einstellungen
             Route::get('/settings',SettingsIndex::class)
                 ->name('admin.settings');
+
+            //Protokoll (Audit-Log)
+            Route::get('/activity-log', ActivityLogIndex::class)
+                ->name('admin.activity-log');
 
             //Datenbereinigung / System zurücksetzen
             Route::get('/system-reset', SystemResetIndex::class)

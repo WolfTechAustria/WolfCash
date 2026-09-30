@@ -239,6 +239,28 @@ class SystemResetServiceTest extends TestCase
         }
     }
 
+    public function test_reset_sales_restarts_order_numbering(): void
+    {
+        $seed = $this->seedEverything();
+        $attributes = ['table_id' => $seed['table']->id, 'status' => Order::STATUS_PAID];
+        Order::create($attributes);
+
+        app(SystemResetService::class)->reset(['sales']);
+
+        $this->assertSame(1, Order::create($attributes)->id);
+    }
+
+    public function test_reset_keeps_sequence_above_remaining_rows(): void
+    {
+        $seed = $this->seedEverything();
+
+        app(SystemResetService::class)->reset(['sales']);
+
+        // Tische wurden nicht zurückgesetzt — der Zähler darf nicht
+        // auf 1 fallen, sonst käme es zu einer ID-Kollision.
+        $this->assertGreaterThan($seed['table']->id, Table::create(['number' => '2'])->id);
+    }
+
     public function test_export_data_contains_selected_categories(): void
     {
         $this->seedEverything();

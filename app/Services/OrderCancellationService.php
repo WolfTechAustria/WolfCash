@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ActivityLog;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
@@ -20,6 +21,7 @@ class OrderCancellationService
     public function __construct(
         private readonly DailyClosingService $dailyClosingService,
         private readonly StockService $stockService,
+        private readonly ActivityLogger $activityLogger,
     ) {
     }
 
@@ -108,6 +110,26 @@ class OrderCancellationService
             $order->recalculateTotal();
 
             $order->closeIfSettled();
+
+            $this->activityLogger->log(
+                ActivityLog::ITEM_CANCELLED,
+                sprintf(
+                    'Tisch %s: %d× %s storniert (%s)',
+                    $order->table?->number ?? '–',
+                    $quantity,
+                    $lockedItem->product?->name ?? 'Unbekanntes Produkt',
+                    $reason
+                ),
+                $cancellation,
+                [
+                    'order_id' => $order->id,
+                    'order_item_id' => $lockedItem->id,
+                    'quantity' => $quantity,
+                    'amount' => round((float) $lockedItem->price * $quantity, 2),
+                    'reason' => $reason,
+                ],
+                $userId,
+            );
 
             return $lockedItem->fresh([
                 'product',
