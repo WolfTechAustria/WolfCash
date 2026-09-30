@@ -6,6 +6,8 @@ use App\Models\OrderItem;
 use App\Models\PrintJob;
 use App\Models\ProductionStation;
 use Illuminate\Support\Collection;
+use App\Services\ProductionBoard;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +25,26 @@ class Index extends Component
     public function selectStation(?int $stationId): void
     {
         $this->station = $stationId;
+    }
+
+    /**
+     * Live-Signal über Reverb: neu rendern, sofern die Änderung
+     * die gerade gewählte Station betrifft.
+     *
+     * @param  array{stationIds?: array<int, int>}  $payload
+     */
+    #[On('echo:production,.production.changed')]
+    public function refreshBoard(array $payload = []): void
+    {
+        $stationIds = array_map('intval', $payload['stationIds'] ?? []);
+
+        if (
+            $this->station !== null
+            && $stationIds !== []
+            && ! in_array($this->station, $stationIds, true)
+        ) {
+            $this->skipRender();
+        }
     }
 
     public function completeItemUnit( int $jobId, int $itemId): void
@@ -76,6 +98,8 @@ class Index extends Component
             $job,
             $payloadItemIds
         );
+
+        ProductionBoard::changed($job->production_station_id);
     }
 
     public function reopenItemUnit( int $jobId, int $itemId): void
@@ -119,6 +143,8 @@ class Index extends Component
                 },
             ]);
         });
+
+        ProductionBoard::changed($job->production_station_id);
     }
 
     public function completeGroupedItem(int $jobId, int $itemId): void {
@@ -149,6 +175,8 @@ class Index extends Component
             $job,
             $payloadItemIds
         );
+
+        ProductionBoard::changed($job->production_station_id);
     }
 
     public function reopenGroupedItem(int $jobId, int $itemId): void {
@@ -172,6 +200,8 @@ class Index extends Component
                 'production_completed_quantity' => 0,
                 'production_status' => OrderItem::PRODUCTION_PENDING,
             ]);
+
+        ProductionBoard::changed($job->production_station_id);
     }
 
     public function completeJob(int $jobId): void
@@ -219,6 +249,8 @@ class Index extends Component
         }
 
         $this->releasePrintJobIfRequired($job);
+
+        ProductionBoard::changed($job->production_station_id);
     }
 
     private function finishJobWhenAllItemsAreDone(PrintJob $job, Collection $itemIds): void {
