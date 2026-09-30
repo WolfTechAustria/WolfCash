@@ -5,7 +5,7 @@ namespace App\Printing;
 class RenderedPrint
 {
     /**
-     * @param array<int, string> $lines
+     * @param array<int, string|PrintLine> $lines
      * @param array<int, string> $headerLines zentriert unter dem Titel
      */
     public function __construct(

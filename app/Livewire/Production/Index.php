@@ -205,6 +205,12 @@ class Index extends Component
             ]);
         });
 
+        /*
+         * Einzelausdrucke können schon gedruckt sein, bevor der Job
+         * als fertig markiert ist – dann hier den Status nachziehen.
+         */
+        $job->syncStatusFromOutputs();
+
         foreach ($itemIds as $itemId) {
             $this->releaseItemOutputsIfRequired(
                 $job,
@@ -233,6 +239,8 @@ class Index extends Component
             $job->update([
                 'production_completed_at' => now(),
             ]);
+
+            $job->syncStatusFromOutputs();
 
             $this->releasePrintJobIfRequired($job);
         }

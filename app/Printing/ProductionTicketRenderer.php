@@ -99,7 +99,7 @@ class ProductionTicketRenderer
 
             $note = $item['note'] ?? null;
 
-            $lines[] = $quantity.'x '.$name;
+            $lines[] = PrintLine::bold($quantity.'x '.$name);
 
             if ($note) {
                 $lines[] = '  > '.$note;
@@ -131,7 +131,7 @@ class ProductionTicketRenderer
 
         $note = $item['note'] ?? null;
 
-        $lines[] = '1x '.$name;
+        $lines[] = PrintLine::bold('1x '.$name);
 
         if ($note) {
             $lines[] = '  > '.$note;
@@ -342,7 +342,7 @@ class ProductionTicketRenderer
     }
 
     /**
-     * @return array<int, string>
+     * @return array<int, string|PrintLine>
      */
     private function createHeaderLines(
         PrintJob $job
@@ -351,7 +351,7 @@ class ProductionTicketRenderer
             $job->order?->table?->number ?? '–';
 
         $lines = [
-            'TISCH '.$tableNumber,
+            PrintLine::boldCentered('TISCH '.$tableNumber),
         ];
 
         if ($job->productionStation) {
@@ -373,7 +373,7 @@ class ProductionTicketRenderer
     }
 
     /**
-     * @param array<int, string> $lines
+     * @param array<int, string|PrintLine> $lines
      */
     private function appendFooterLines(
         array &$lines,

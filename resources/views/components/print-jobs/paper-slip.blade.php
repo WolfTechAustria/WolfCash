@@ -24,7 +24,12 @@
 
                 <div class="mt-[1.45em]">
                     @foreach($document->lines as $line)
-                        <div class="min-h-[1.45em] whitespace-pre-wrap break-words">{{ $line }}</div>
+                        @php $formatted = $line instanceof \App\Printing\PrintLine; @endphp
+                        <div @class([
+                            'min-h-[1.45em] whitespace-pre-wrap break-words',
+                            'font-bold' => $formatted && $line->bold,
+                            'text-center' => $formatted && $line->center,
+                        ])>{{ $line }}</div>
                     @endforeach
                 </div>
 

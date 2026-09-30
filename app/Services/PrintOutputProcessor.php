@@ -98,6 +98,8 @@ class PrintOutputProcessor
                 ]);
             });
 
+            $output->printJob->syncStatusFromOutputs();
+
             Log::info(
                 'Einzelausdruck erfolgreich verarbeitet.',
                 [
@@ -145,5 +147,7 @@ class PrintOutputProcessor
             'status' => PrintOutput::STATUS_FAILED,
             'error_message' => $message,
         ]);
+
+        $output->printJob?->syncStatusFromOutputs();
     }
 }

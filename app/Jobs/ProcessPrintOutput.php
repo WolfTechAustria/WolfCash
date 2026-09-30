@@ -78,5 +78,7 @@ class ProcessPrintOutput implements ShouldQueue
             'error_message' => $exception?->getMessage()
                 ?? 'Der Ausdruck ist endgültig fehlgeschlagen.',
         ]);
+
+        $output->printJob?->syncStatusFromOutputs();
     }
 }

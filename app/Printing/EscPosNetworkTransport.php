@@ -74,7 +74,27 @@ class EscPosNetworkTransport implements PrintTransport
             );
 
             foreach ($document->lines as $line) {
-                $escPos->text((string) $line."\n");
+                if (! $line instanceof PrintLine) {
+                    $escPos->text((string) $line."\n");
+
+                    continue;
+                }
+
+                if ($line->center) {
+                    $escPos->setJustification(
+                        EscPosPrinter::JUSTIFY_CENTER
+                    );
+                }
+
+                $escPos->setEmphasis($line->bold);
+                $escPos->text($line->text."\n");
+                $escPos->setEmphasis(false);
+
+                if ($line->center) {
+                    $escPos->setJustification(
+                        EscPosPrinter::JUSTIFY_LEFT
+                    );
+                }
             }
 
             $escPos->feed(2);
