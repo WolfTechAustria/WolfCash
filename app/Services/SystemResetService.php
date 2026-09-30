@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 use Throwable;
 
@@ -40,6 +41,36 @@ class SystemResetService
         self::CATEGORY_TABLES,
         self::CATEGORY_PRODUCTS,
         self::CATEGORY_PRINTING,
+    ];
+
+    /**
+     * Tabellen je Kategorie, deren ID-Zähler nach dem Reset neu
+     * gesetzt werden — inkl. der per FK-Kaskade mitgelöschten
+     * Kindtabellen, damit z. B. Bestellungen wieder bei #1 beginnen.
+     */
+    private const SEQUENCE_TABLES = [
+        self::CATEGORY_SALES => [
+            'orders',
+            'order_items',
+            'order_item_cancellations',
+            'payments',
+            'print_jobs',
+            'print_outputs',
+            'self_orders',
+            'self_order_items',
+            'table_order_sessions',
+            'daily_closings',
+        ],
+        self::CATEGORY_TABLES => ['tables'],
+        self::CATEGORY_PRODUCTS => [
+            'products',
+            'product_categories',
+            'product_groups',
+            'product_reservations',
+        ],
+        self::CATEGORY_PRINTING => ['printers', 'production_stations'],
+        self::CATEGORY_DEVICES => ['devices', 'mobile_session_codes'],
+        self::CATEGORY_SETTINGS => ['settings'],
     ];
 
     /**
@@ -241,5 +272,60 @@ class SystemResetService
                 }
             }
         });
+
+        /*
+         * Erst nach dem Commit: Sequence-Änderungen sind in PostgreSQL
+         * nicht transaktional und würden bei einem Rollback nicht
+         * zurückgenommen. Gesetzt wird auf MAX(id) + 1 statt stur auf 1,
+         * damit ein Zähler nie unter noch vorhandene Datensätze fällt.
+         */
+        foreach ($categories as $category) {
+            foreach (self::SEQUENCE_TABLES[$category] ?? [] as $table) {
+                $this->resetSequence($table);
+            }
+        }
+    }
+
+    private function resetSequence(string $table): void
+    {
+        if (! Schema::hasTable($table)) {
+            return;
+        }
+
+        $maxId = (int) DB::table($table)->max('id');
+
+        match (DB::getDriverName()) {
+            'pgsql' => DB::statement(
+                "SELECT setval(pg_get_serial_sequence(?, 'id'), ?, false)",
+                [$table, $maxId + 1]
+            ),
+            'mysql', 'mariadb' => DB::statement(
+                'ALTER TABLE `'.$table.'` AUTO_INCREMENT = '.($maxId + 1)
+            ),
+            'sqlite' => $this->resetSqliteSequence($table, $maxId),
+            default => null,
+        };
+    }
+
+    private function resetSqliteSequence(string $table, int $maxId): void
+    {
+        $hasSequenceTable = DB::table('sqlite_master')
+            ->where('type', 'table')
+            ->where('name', 'sqlite_sequence')
+            ->exists();
+
+        if (! $hasSequenceTable) {
+            return;
+        }
+
+        if ($maxId === 0) {
+            DB::table('sqlite_sequence')->where('name', $table)->delete();
+
+            return;
+        }
+
+        DB::table('sqlite_sequence')
+            ->where('name', $table)
+            ->update(['seq' => $maxId]);
     }
 }
