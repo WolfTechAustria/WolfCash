@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Http\Middleware\EnsureFloorDevice;
+use App\Models\ActivityLog;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
@@ -15,7 +16,27 @@ class PaymentService
         private readonly DailyClosingService $dailyClosingService,
         private readonly PaymentReceiptService $paymentReceiptService,
         private readonly StockService $stockService,
+        private readonly ActivityLogger $activityLogger,
     ) {
+    }
+
+    private function logPayment(Payment $payment, Order $order): void
+    {
+        $this->activityLogger->log(
+            ActivityLog::PAYMENT_CREATED,
+            sprintf(
+                'Tisch %s: %s € %s',
+                $order->table?->number ?? '–',
+                number_format((float) $payment->amount, 2, ',', '.'),
+                Payment::methodLabel($payment->payment_method)
+            ),
+            $payment,
+            [
+                'order_id' => $order->id,
+                'amount' => (float) $payment->amount,
+                'method' => $payment->payment_method,
+            ],
+        );
     }
 
     /**
@@ -174,6 +195,8 @@ class PaymentService
 
             $order->refresh()->closeIfSettled();
 
+            $this->logPayment($payment, $order);
+
             return $payment;
         });
     }
@@ -265,6 +288,8 @@ class PaymentService
             );
 
             $order->refresh()->closeIfSettled();
+
+            $this->logPayment($payment, $order);
 
             return $payment;
         });

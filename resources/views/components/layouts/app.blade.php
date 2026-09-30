@@ -50,6 +50,7 @@
                 ['route' => 'admin.production-stations', 'label' => 'Arbeitsplätze', 'icon' => 'building-office'],
                 ['route' => 'admin.print-jobs', 'label' => 'Druckjobs', 'icon' => 'inbox-stack'],
                 ['route' => 'admin.devices', 'label' => 'Geräte', 'icon' => 'device-tablet'],
+                ['route' => 'admin.activity-log', 'label' => 'Protokoll', 'icon' => 'document-text'],
             ],
         ],
         [

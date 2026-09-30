@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ActivityLog;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Table;
@@ -12,6 +13,7 @@ class OrderService
     public function __construct(
         private readonly DailyClosingService $dailyClosingService,
         private readonly StockService $stockService,
+        private readonly ActivityLogger $activityLogger,
     ) {
     }
 
@@ -154,6 +156,10 @@ class OrderService
 
             $order->recalculateTotal();
 
+            if ($createdItems !== []) {
+                $this->logBooking($table, $order, $createdItems, $source, $userId);
+            }
+
             $table->update([
                 'status' => 'occupied',
             ]);
@@ -190,5 +196,45 @@ class OrderService
                 'table',
             ]);
         });
+    }
+
+    /**
+     * @param array<int, OrderItem> $items
+     */
+    private function logBooking(
+        Table $table,
+        Order $order,
+        array $items,
+        string $source,
+        ?int $userId,
+    ): void {
+        $items = collect($items);
+
+        $this->activityLogger->log(
+            ActivityLog::ORDER_BOOKED,
+            sprintf(
+                'Tisch %s: %d Stück boniert, %s €',
+                $table->number,
+                $items->sum('quantity'),
+                number_format(
+                    $items->sum(fn (OrderItem $item) => (float) $item->price * $item->quantity),
+                    2,
+                    ',',
+                    '.'
+                )
+            ),
+            $order,
+            [
+                'source' => $source,
+                'items' => $items
+                    ->map(fn (OrderItem $item) => [
+                        'product_id' => $item->product_id,
+                        'quantity' => $item->quantity,
+                        'price' => (float) $item->price,
+                    ])
+                    ->all(),
+            ],
+            $userId,
+        );
     }
 }

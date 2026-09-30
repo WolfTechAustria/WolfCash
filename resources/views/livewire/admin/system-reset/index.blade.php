@@ -59,6 +59,11 @@
                 'label' => 'Einstellungen',
                 'description' => 'Self-Ordering-Texte und Belegdruck-Schalter werden auf Standardwerte zurückgesetzt.',
             ],
+            'activity_log' => [
+                'property' => 'resetActivityLog',
+                'label' => 'Protokoll',
+                'description' => 'Alle Protokolleinträge inkl. Benutzer- und Gerätenamen. Der Reset selbst wird danach als erster neuer Eintrag festgehalten.',
+            ],
         ];
     @endphp
 

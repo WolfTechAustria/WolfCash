@@ -34,6 +34,8 @@ class SystemResetService
 
     public const CATEGORY_SETTINGS = 'settings';
 
+    public const CATEGORY_ACTIVITY_LOG = 'activity_log';
+
     /**
      * Kategorien, deren Auswahl zwingend auch "sales" mit einbezieht.
      */
@@ -71,6 +73,7 @@ class SystemResetService
         self::CATEGORY_PRINTING => ['printers', 'production_stations'],
         self::CATEGORY_DEVICES => ['devices', 'mobile_session_codes'],
         self::CATEGORY_SETTINGS => ['settings'],
+        self::CATEGORY_ACTIVITY_LOG => ['activity_logs'],
     ];
 
     /**
@@ -145,6 +148,12 @@ class SystemResetService
             ];
         }
 
+        if (in_array(self::CATEGORY_ACTIVITY_LOG, $categories, true)) {
+            $counts[self::CATEGORY_ACTIVITY_LOG] = [
+                'Protokolleinträge' => DB::table('activity_logs')->count(),
+            ];
+        }
+
         return $counts;
     }
 
@@ -192,6 +201,10 @@ class SystemResetService
 
         if (in_array(self::CATEGORY_SETTINGS, $categories, true)) {
             $data['settings'] = DB::table('settings')->get();
+        }
+
+        if (in_array(self::CATEGORY_ACTIVITY_LOG, $categories, true)) {
+            $data['activity_logs'] = DB::table('activity_logs')->get();
         }
 
         return [
@@ -270,6 +283,15 @@ class SystemResetService
                 foreach (Setting::keys() as $key) {
                     Cache::forget('setting:'.$key);
                 }
+            }
+
+            /*
+             * Direkt über den Query Builder, da das Model Löschungen
+             * einzelner Einträge verbietet. Der Reset selbst wird danach
+             * vom Aufrufer als erster neuer Eintrag protokolliert.
+             */
+            if (in_array(self::CATEGORY_ACTIVITY_LOG, $categories, true)) {
+                DB::table('activity_logs')->delete();
             }
         });
 

@@ -3,7 +3,9 @@
 namespace App\Livewire\Admin\Devices;
 
 use App\Enums\DeviceStatus;
+use App\Models\ActivityLog;
 use App\Models\Device;
+use App\Services\ActivityLogger;
 use Illuminate\Support\Str;
 use Livewire\Component;
 
@@ -37,9 +39,21 @@ class Index extends Component
             'name' => ['required', 'string', 'max:255'],
         ]);
 
-        Device::findOrFail($this->editingId)->update([
+        $device = Device::findOrFail($this->editingId);
+        $oldName = $device->name;
+
+        $device->update([
             'name' => $validated['name'],
         ]);
+
+        if ($oldName !== $device->name) {
+            app(ActivityLogger::class)->log(
+                ActivityLog::DEVICE_RENAMED,
+                "Gerät „{$oldName}“ umbenannt in „{$device->name}“",
+                $device,
+                ['old' => $oldName, 'new' => $device->name],
+            );
+        }
 
         $this->cancelEditing();
     }
@@ -59,6 +73,12 @@ class Index extends Component
             'api_token' => $device->api_token
                 ?: Str::random(80),
         ]);
+
+        app(ActivityLogger::class)->log(
+            ActivityLog::DEVICE_APPROVED,
+            "Gerät „{$device->name}“ freigegeben",
+            $device,
+        );
     }
 
     public function block(int $id): void
@@ -68,6 +88,12 @@ class Index extends Component
         $device->update([
             'status' => DeviceStatus::Blocked,
         ]);
+
+        app(ActivityLogger::class)->log(
+            ActivityLog::DEVICE_BLOCKED,
+            "Gerät „{$device->name}“ gesperrt",
+            $device,
+        );
     }
 
     public function render()

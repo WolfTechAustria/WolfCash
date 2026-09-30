@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ActivityLog;
 use App\Models\DailyClosing;
 use App\Models\Order;
 use App\Models\OrderItemCancellation;
@@ -12,6 +13,11 @@ use RuntimeException;
 
 class DailyClosingService
 {
+    public function __construct(
+        private readonly ActivityLogger $activityLogger,
+    ) {
+    }
+
     public function close(
         Carbon $businessDate,
         ?int $userId = null
@@ -304,7 +310,7 @@ class DailyClosingService
                     ->all(),
             ];
 
-            return DailyClosing::create([
+            $closing = DailyClosing::create([
                 'business_date' =>
                     $businessDate->format('Y-m-d'),
 
@@ -364,6 +370,23 @@ class DailyClosingService
 
                 'snapshot' => $snapshot,
             ]);
+
+            $this->activityLogger->log(
+                ActivityLog::DAILY_CLOSING_CREATED,
+                sprintf(
+                    'Tagesabschluss %s: %s € bezahlt',
+                    $businessDate->format('d.m.Y'),
+                    number_format($paidAmount, 2, ',', '.')
+                ),
+                $closing,
+                [
+                    'business_date' => $businessDate->format('Y-m-d'),
+                    'paid_amount' => round($paidAmount, 2),
+                ],
+                $userId,
+            );
+
+            return $closing;
         });
     }
 

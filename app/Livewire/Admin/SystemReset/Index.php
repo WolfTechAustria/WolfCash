@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Admin\SystemReset;
 
+use App\Models\ActivityLog;
+use App\Services\ActivityLogger;
 use App\Services\SystemResetService;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
@@ -23,6 +25,8 @@ class Index extends Component
     public bool $resetDevices = false;
 
     public bool $resetSettings = false;
+
+    public bool $resetActivityLog = false;
 
     public string $confirmationText = '';
 
@@ -70,6 +74,7 @@ class Index extends Component
             SystemResetService::CATEGORY_PRINTING => $this->resetPrinting,
             SystemResetService::CATEGORY_DEVICES => $this->resetDevices,
             SystemResetService::CATEGORY_SETTINGS => $this->resetSettings,
+            SystemResetService::CATEGORY_ACTIVITY_LOG => $this->resetActivityLog,
         ]));
     }
 
@@ -109,6 +114,7 @@ class Index extends Component
         $this->resetPrinting = true;
         $this->resetDevices = true;
         $this->resetSettings = true;
+        $this->resetActivityLog = true;
     }
 
     public function deselectAll(): void
@@ -119,6 +125,7 @@ class Index extends Component
         $this->resetPrinting = false;
         $this->resetDevices = false;
         $this->resetSettings = false;
+        $this->resetActivityLog = false;
         $this->confirmationText = '';
     }
 
@@ -187,6 +194,15 @@ class Index extends Component
                 'categories' => $categories,
                 'counts' => $counts,
             ]);
+
+            app(ActivityLogger::class)->log(
+                ActivityLog::SYSTEM_RESET,
+                'System zurückgesetzt: '.implode(', ', $categories),
+                properties: [
+                    'categories' => $categories,
+                    'counts' => $counts,
+                ],
+            );
 
             session()->flash(
                 'success',
