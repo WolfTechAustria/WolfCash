@@ -174,6 +174,14 @@ class Index extends Component
         return OrderItem::query()
             ->whereDate('order_items.created_at', today())
             ->join('products', 'products.id', '=', 'order_items.product_id')
+            /*
+             * Per Bon eingelöste Positionen wurden bereits an der
+             * stationären Kassa verkauft und zählen dort.
+             */
+            ->whereDoesntHave(
+                'payment',
+                fn (Builder $query) => $query->where('payment_method', Payment::VOUCHER)
+            )
             ->select(
                 'products.name',
                 DB::raw('SUM(order_items.quantity - order_items.cancelled_quantity) AS quantity'),
