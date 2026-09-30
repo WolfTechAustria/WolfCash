@@ -104,6 +104,7 @@ class PrintService
                     ->afterCommit();
             }
 
+            ProductionBoard::changed($printJob->production_station_id);
         }
     }
 
@@ -156,5 +157,7 @@ class PrintService
 
         ProcessPrintJob::dispatch($printJob->id)
             ->afterCommit();
+
+        ProductionBoard::changed(null);
     }
 }
