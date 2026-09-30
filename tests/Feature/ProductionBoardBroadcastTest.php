@@ -37,7 +37,11 @@ class ProductionBoardBroadcastTest extends TestCase
         parent::setUp();
 
         $this->table = Table::create(['number' => '3', 'name' => 'Tisch 3']);
-        $printer = Printer::create(['name' => 'Küche', 'is_active' => true]);
+        $printer = Printer::create([
+            'name' => 'Küche',
+            'is_active' => true,
+            'print_trigger' => Printer::PRINT_TRIGGER_ON_JOB_COMPLETE,
+        ]);
         $group = ProductGroup::create(['name' => 'Alles']);
 
         $this->kitchen = ProductionStation::create(['name' => 'Küche']);

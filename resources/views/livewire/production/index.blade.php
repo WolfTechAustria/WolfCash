@@ -1,13 +1,51 @@
-<div wire:poll.15s class="px-4 py-4 sm:px-6">
+{{-- keep-alive: auch als Hintergrund-Tab weiter abgleichen --}}
+<div wire:poll.15s.keep-alive class="px-4 py-4 sm:px-6">
 
-    <div class="mb-5 flex items-center justify-between">
+    {{--
+        Verbindungsanzeige: grün = Live über Reverb, rot = getrennt
+        (dann gleicht nur das Polling ab). Nach dem Wiederverbinden
+        sofort neu laden, weil verpasste Signale nicht nachkommen.
+    --}}
+    <div
+        wire:ignore
+        class="mb-5 flex items-center justify-between"
+        x-data="{
+            live: null,
+            init() {
+                const attach = (tries = 0) => {
+                    const connection = window.Echo?.connector?.pusher?.connection;
+
+                    if (! connection) {
+                        if (tries < 50) setTimeout(() => attach(tries + 1), 200);
+                        else this.live = false;
+                        return;
+                    }
+
+                    this.live = connection.state === 'connected';
+
+                    connection.bind('state_change', ({ current }) => {
+                        const wasLive = this.live;
+                        this.live = current === 'connected';
+
+                        if (this.live && wasLive === false) $wire.$refresh();
+                    });
+                };
+
+                attach();
+            },
+        }"
+    >
         <div class="flex items-center gap-2">
             <span class="relative flex h-2.5 w-2.5">
-                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-free opacity-60"></span>
-                <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-free"></span>
+                <span x-show="live !== false" class="absolute inline-flex h-full w-full animate-ping rounded-full bg-free opacity-60"></span>
+                <span class="relative inline-flex h-2.5 w-2.5 rounded-full" :class="live === false ? 'bg-occupied' : 'bg-free'"></span>
             </span>
             <h1 class="font-display text-2xl font-semibold tracking-tight">Küchenmonitor</h1>
         </div>
+
+        <p x-show="live === false" style="display: none" class="text-sm font-medium text-occupied">
+            Offline – aktualisiert alle 15 s
+        </p>
     </div>
 
     {{-- Stationsfilter: große Touch-Ziele --}}
@@ -77,24 +115,35 @@
                             @for($unit = 1; $unit <= $item['quantity']; $unit++)
                                 <x-production.ticket-line
                                     wire:key="job-{{ $job->id }}-item-{{ $item['id'] }}-unit-{{ $unit }}"
-                                    :done="$unit <= $item['production_completed_quantity']"
+                                    :done="$unit <= $item['completed_quantity']"
                                     complete="completeItemUnit({{ $job->id }},{{ $item['id'] }})"
                                     reopen="reopenItemUnit({{ $job->id }},{{ $item['id'] }})"
                                     :note="$item['note'] ?? null"
                                 >1x {{ $item['name'] }}@if($item['quantity'] > 1) ({{ $unit }}/{{ $item['quantity'] }})@endif</x-production.ticket-line>
                             @endfor
 
-                        @else
+                        @elseif($item['quantity'] > 0)
 
                             {{-- Gruppenbon: gesamte Menge gemeinsam --}}
                             <x-production.ticket-line
                                 wire:key="job-{{ $job->id }}-grouped-item-{{ $item['id'] }}"
-                                :done="$item['production_status'] === \App\Models\OrderItem::PRODUCTION_DONE"
+                                :done="$item['done']"
                                 complete="completeGroupedItem({{ $job->id }},{{ $item['id'] }})"
                                 reopen="reopenGroupedItem({{ $job->id }},{{ $item['id'] }})"
                                 :note="$item['note'] ?? null"
                             >{{ $item['quantity'] }}x {{ $item['name'] }}</x-production.ticket-line>
 
+                        @endif
+
+                        {{-- Storno: nicht mehr zubereiten --}}
+                        @if($item['cancelled_quantity'] > 0)
+                            <div
+                                wire:key="job-{{ $job->id }}-item-{{ $item['id'] }}-cancelled"
+                                class="flex gap-[1ch] py-1.5 font-bold text-[#c0262d]"
+                            >
+                                <span class="shrink-0">[-]</span>
+                                <span class="min-w-0 flex-1 whitespace-pre-wrap break-words">STORNO {{ $item['cancelled_quantity'] }}x <span class="line-through">{{ $item['name'] }}</span></span>
+                            </div>
                         @endif
 
                     @empty
@@ -111,12 +160,14 @@
                     <button
                         type="button"
                         wire:click="completeJob({{ $job->id }})"
-                        wire:confirm="Den gesamten Bon als fertig markieren?"
+                        @if($card['has_open_items'])
+                            wire:confirm="Den gesamten Bon als fertig markieren?"
+                        @endif
                         wire:loading.attr="disabled"
                         wire:target="completeJob({{ $job->id }})"
                         class="min-h-[3.5rem] w-full rounded-xl border-2 border-accent font-sans text-lg font-bold text-accent transition active:scale-[0.99]"
                     >
-                        Gesamten Bon fertigstellen
+                        {{ $card['has_open_items'] ? 'Gesamten Bon fertigstellen' : 'Bon abschließen' }}
                     </button>
                 @endif
             </article>

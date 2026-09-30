@@ -104,6 +104,14 @@ class OrderCancellationService
                 cancellation: $cancellation,
             );
 
+            /*
+             * Offene Bons am Küchenmonitor zeigen die stornierte
+             * Menge sofort an.
+             */
+            ProductionBoard::changed(
+                $lockedItem->product?->category?->production_station_id
+            );
+
             $order = RowLock::forUpdate(Order::query())
                 ->findOrFail($lockedItem->order_id);
 

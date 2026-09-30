@@ -78,7 +78,14 @@ class PrintService
                 continue;
             }
 
-            $printImmediately = $jobData['print_trigger'] === Printer::PRINT_TRIGGER_IMMEDIATE;
+            /*
+             * Ohne Drucker gibt es nichts zu drucken – der Bon existiert
+             * dann nur am Küchenmonitor.
+             */
+            $hasPrinter = $jobData['printer_id'] !== null;
+
+            $printImmediately = $hasPrinter
+                && $jobData['print_trigger'] === Printer::PRINT_TRIGGER_IMMEDIATE;
 
             $printJob = PrintJob::create([
                 'order_id' => $order->id,
@@ -87,6 +94,11 @@ class PrintService
                 'type' => PrintJob::TYPE_PRODUCTION,
                 'status' => PrintJob::STATUS_PENDING,
                 'ready_to_print' => $printImmediately,
+                /*
+                 * Sofort gedruckte Bons liegen der Küche schon auf Papier
+                 * vor, am Monitor würden sie nur doppelt auftauchen.
+                 */
+                'show_on_monitor' => ! $printImmediately,
                 'payload' => [
                     'order_id' => $order->id,
                     'table' => $order->table?->number,
@@ -102,9 +114,9 @@ class PrintService
             if($printImmediately) {
                 ProcessPrintJob::dispatch($printJob->id)
                     ->afterCommit();
+            } else {
+                ProductionBoard::changed($printJob->production_station_id);
             }
-
-            ProductionBoard::changed($printJob->production_station_id);
         }
     }
 
@@ -157,7 +169,5 @@ class PrintService
 
         ProcessPrintJob::dispatch($printJob->id)
             ->afterCommit();
-
-        ProductionBoard::changed(null);
     }
 }

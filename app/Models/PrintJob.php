@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -34,6 +35,7 @@ class PrintJob extends Model
         'production_station_id',
         'production_completed_at',
         'ready_to_print',
+        'show_on_monitor',
     ];
 
     protected function casts(): array
@@ -41,9 +43,20 @@ class PrintJob extends Model
         return [
             'payload' => 'array',
             'ready_to_print' => 'boolean',
+            'show_on_monitor' => 'boolean',
             'printed_at' => 'datetime',
             'production_completed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Offene Bons, an denen die Küche noch etwas tun muss.
+     */
+    public function scopeOpenOnMonitor(Builder $query): Builder
+    {
+        return $query
+            ->where('show_on_monitor', true)
+            ->whereNull('production_completed_at');
     }
 
     public function order(): BelongsTo

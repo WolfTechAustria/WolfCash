@@ -2,21 +2,32 @@
 
 namespace App\Livewire\Production;
 
+use App\Jobs\ProcessPrintJob;
+use App\Jobs\ProcessPrintOutput;
 use App\Models\OrderItem;
+use App\Models\Printer;
 use App\Models\PrintJob;
+use App\Models\PrintOutput;
+use App\Models\Product;
 use App\Models\ProductionStation;
-use Illuminate\Support\Collection;
 use App\Services\ProductionBoard;
+use App\Support\RowLock;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
-use Illuminate\Support\Facades\DB;
-use App\Jobs\ProcessPrintJob;
-use App\Models\Printer;
-use App\Jobs\ProcessPrintOutput;
-use App\Models\PrintOutput;
-use App\Models\Product;
 
+/**
+ * Küchenmonitor.
+ *
+ * Mehrere Monitore arbeiten gleichzeitig auf denselben Bons. Tippt
+ * jemand auf einen Bon, den ein anderer Monitor gerade abgeschlossen
+ * hat, passiert nichts – der Monitor zeigt einfach den neuen Stand.
+ *
+ * Maßgeblich ist immer die offene (nicht stornierte) Menge einer
+ * Position; vollständig stornierte Positionen gelten als erledigt.
+ */
 class Index extends Component
 {
     #[Url]
@@ -47,235 +58,176 @@ class Index extends Component
         }
     }
 
-    public function completeItemUnit( int $jobId, int $itemId): void
+    public function completeItemUnit(int $jobId, int $itemId): void
     {
-        $job = PrintJob::query()
-            ->whereNull('production_completed_at')
-            ->findOrFail($jobId);
-
-        $payloadItemIds = collect($job->payload['items'] ?? [])
-            ->pluck('order_item_id')
-            ->filter()
-            ->map(fn ($id) => (int) $id);
-
-        abort_unless(
-            $payloadItemIds->contains($itemId),
-            404
-        );
-
-        DB::transaction(function () use ($itemId): void {
-            $item = OrderItem::query()
-                ->lockForUpdate()
-                ->findOrFail($itemId);
-
-            $completedQuantity = min(
-                $item->production_completed_quantity + 1,
-                $item->quantity
-            );
-
-            $item->update([
-                'production_completed_quantity' => $completedQuantity,
-
-                'production_status' => match (true) {
-                    $completedQuantity >= $item->quantity =>
-                    OrderItem::PRODUCTION_DONE,
-
-                    $completedQuantity > 0 =>
-                    OrderItem::PRODUCTION_PROGRESS,
-
-                    default =>
-                    OrderItem::PRODUCTION_PENDING,
-                },
-            ]);
-        });
-
-        $this->releaseItemOutputsIfRequired(
-            $job,
-            $itemId
-        );
-
-        $this->finishJobWhenAllItemsAreDone(
-            $job,
-            $payloadItemIds
-        );
-
-        ProductionBoard::changed($job->production_station_id);
+        $this->changeItem($jobId, $itemId, fn (OrderItem $item): int => $item->production_completed_quantity + 1);
     }
 
-    public function reopenItemUnit( int $jobId, int $itemId): void
+    public function reopenItemUnit(int $jobId, int $itemId): void
     {
-        $job = PrintJob::query()
-            ->whereNull('production_completed_at')
-            ->findOrFail($jobId);
-
-        $payloadItemIds = collect($job->payload['items'] ?? [])
-            ->pluck('order_item_id')
-            ->filter()
-            ->map(fn ($id) => (int) $id);
-
-        abort_unless(
-            $payloadItemIds->contains($itemId),
-            404
-        );
-
-        DB::transaction(function () use ($itemId): void {
-            $item = OrderItem::query()
-                ->lockForUpdate()
-                ->findOrFail($itemId);
-
-            $completedQuantity = max(
-                $item->production_completed_quantity - 1,
-                0
-            );
-
-            $item->update([
-                'production_completed_quantity' => $completedQuantity,
-
-                'production_status' => match (true) {
-                    $completedQuantity >= $item->quantity =>
-                    OrderItem::PRODUCTION_DONE,
-
-                    $completedQuantity > 0 =>
-                    OrderItem::PRODUCTION_PROGRESS,
-
-                    default =>
-                    OrderItem::PRODUCTION_PENDING,
-                },
-            ]);
-        });
-
-        ProductionBoard::changed($job->production_station_id);
+        $this->changeItem($jobId, $itemId, fn (OrderItem $item): int => $item->production_completed_quantity - 1);
     }
 
-    public function completeGroupedItem(int $jobId, int $itemId): void {
-        $job = PrintJob::query()
-            ->whereNull('production_completed_at')
-            ->findOrFail($jobId);
-
-        $payloadItemIds = collect($job->payload['items'] ?? [])
-            ->pluck('order_item_id')
-            ->filter()
-            ->map(fn ($id) => (int) $id);
-
-        abort_unless($payloadItemIds->contains($itemId), 404);
-
-        $item = OrderItem::findOrFail($itemId);
-
-        $item->update([
-            'production_completed_quantity' => $item->quantity,
-            'production_status' => OrderItem::PRODUCTION_DONE,
-        ]);
-
-        $this->releaseItemOutputsIfRequired(
-            $job,
-            $itemId
-        );
-
-        $this->finishJobWhenAllItemsAreDone(
-            $job,
-            $payloadItemIds
-        );
-
-        ProductionBoard::changed($job->production_station_id);
+    public function completeGroupedItem(int $jobId, int $itemId): void
+    {
+        $this->changeItem($jobId, $itemId, fn (OrderItem $item): int => $item->open_quantity);
     }
 
-    public function reopenGroupedItem(int $jobId, int $itemId): void {
-        $job = PrintJob::query()
-            ->whereNull('production_completed_at')
-            ->findOrFail($jobId);
-
-        $payloadItemIds = collect($job->payload['items'] ?? [])
-            ->pluck('order_item_id')
-            ->filter()
-            ->map(fn ($id) => (int) $id);
-
-        abort_unless(
-            $payloadItemIds->contains($itemId),
-            404
-        );
-
-        OrderItem::query()
-            ->whereKey($itemId)
-            ->update([
-                'production_completed_quantity' => 0,
-                'production_status' => OrderItem::PRODUCTION_PENDING,
-            ]);
-
-        ProductionBoard::changed($job->production_station_id);
+    public function reopenGroupedItem(int $jobId, int $itemId): void
+    {
+        $this->changeItem($jobId, $itemId, fn (): int => 0);
     }
 
     public function completeJob(int $jobId): void
     {
-        $job = PrintJob::query()
-            ->whereNull('production_completed_at')
-            ->findOrFail($jobId);
+        $job = DB::transaction(function () use ($jobId): ?PrintJob {
+            $job = $this->lockOpenJob($jobId);
 
-        $itemIds = collect($job->payload['items'] ?? [])
-            ->pluck('order_item_id')
-            ->filter()
-            ->map(fn ($id) => (int) $id);
-
-        DB::transaction(function () use ($job, $itemIds): void {
-            if ($itemIds->isNotEmpty()) {
-                $items = OrderItem::query()
-                    ->whereIn('id', $itemIds)
-                    ->lockForUpdate()
-                    ->get();
-
-                foreach ($items as $item) {
-                    $item->update([
-                        'production_completed_quantity' => $item->quantity,
-                        'production_status' => OrderItem::PRODUCTION_DONE,
-                    ]);
-                }
+            if (! $job) {
+                return null;
             }
 
-            $job->update([
-                'production_completed_at' => now(),
-            ]);
+            $items = RowLock::forUpdate(OrderItem::query())
+                ->whereIn('id', $this->payloadItemIds($job))
+                ->get();
+
+            foreach ($items as $item) {
+                $this->setCompletedQuantity($item, $item->open_quantity);
+            }
+
+            $job->update(['production_completed_at' => now()]);
+
+            return $job;
         });
 
+        if (! $job) {
+            return;
+        }
+
+        $this->afterJobCompleted($job);
+
+        foreach ($this->payloadItemIds($job) as $itemId) {
+            $this->releaseItemOutputsIfRequired($job, $itemId);
+        }
+
+        ProductionBoard::changed($job->production_station_id);
+    }
+
+    /**
+     * Setzt die fertige Menge einer Position und schließt den Bon ab,
+     * sobald alle Positionen fertig sind – alles unter Zeilensperre,
+     * damit zwei Monitore den Bon nicht doppelt abschließen.
+     *
+     * @param  \Closure(OrderItem): int  $completedQuantity
+     */
+    private function changeItem(int $jobId, int $itemId, \Closure $completedQuantity): void
+    {
+        $result = DB::transaction(function () use ($jobId, $itemId, $completedQuantity): ?array {
+            $job = $this->lockOpenJob($jobId);
+
+            if (! $job) {
+                return null;
+            }
+
+            $itemIds = $this->payloadItemIds($job);
+
+            if (! $itemIds->contains($itemId)) {
+                return null;
+            }
+
+            $item = RowLock::forUpdate(OrderItem::query())->find($itemId);
+
+            if (! $item) {
+                return null;
+            }
+
+            $this->setCompletedQuantity($item, $completedQuantity($item));
+
+            $jobCompleted = ! $this->hasOpenItems($itemIds);
+
+            if ($jobCompleted) {
+                $job->update(['production_completed_at' => now()]);
+            }
+
+            return [$job, $jobCompleted];
+        });
+
+        if (! $result) {
+            return;
+        }
+
+        [$job, $jobCompleted] = $result;
+
+        $this->releaseItemOutputsIfRequired($job, $itemId);
+
+        if ($jobCompleted) {
+            $this->afterJobCompleted($job);
+        }
+
+        ProductionBoard::changed($job->production_station_id);
+    }
+
+    private function lockOpenJob(int $jobId): ?PrintJob
+    {
+        return RowLock::forUpdate(PrintJob::query()->openOnMonitor())
+            ->find($jobId);
+    }
+
+    /**
+     * @return Collection<int, int>
+     */
+    private function payloadItemIds(PrintJob $job): Collection
+    {
+        return collect($job->payload['items'] ?? [])
+            ->pluck('order_item_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values();
+    }
+
+    private function setCompletedQuantity(OrderItem $item, int $completed): void
+    {
+        $target = $item->open_quantity;
+        $completed = max(0, min($completed, $target));
+
+        $item->update([
+            'production_completed_quantity' => $completed,
+
+            'production_status' => match (true) {
+                $completed >= $target => OrderItem::PRODUCTION_DONE,
+                $completed > 0 => OrderItem::PRODUCTION_PROGRESS,
+                default => OrderItem::PRODUCTION_PENDING,
+            },
+        ]);
+    }
+
+    /**
+     * @param  Collection<int, int>  $itemIds
+     */
+    private function hasOpenItems(Collection $itemIds): bool
+    {
+        if ($itemIds->isEmpty()) {
+            return true;
+        }
+
+        return OrderItem::query()
+            ->whereIn('id', $itemIds)
+            ->get()
+            ->contains(
+                fn (OrderItem $item): bool =>
+                    $item->production_completed_quantity < $item->open_quantity
+            );
+    }
+
+    private function afterJobCompleted(PrintJob $job): void
+    {
         /*
          * Einzelausdrucke können schon gedruckt sein, bevor der Job
          * als fertig markiert ist – dann hier den Status nachziehen.
          */
         $job->syncStatusFromOutputs();
 
-        foreach ($itemIds as $itemId) {
-            $this->releaseItemOutputsIfRequired(
-                $job,
-                (int) $itemId
-            );
-        }
-
         $this->releasePrintJobIfRequired($job);
-
-        ProductionBoard::changed($job->production_station_id);
-    }
-
-    private function finishJobWhenAllItemsAreDone(PrintJob $job, Collection $itemIds): void {
-        if ($itemIds->isEmpty()) {
-            return;
-        }
-
-        $openItemsExist = OrderItem::query()
-            ->whereIn('id', $itemIds)
-            ->where(
-                'production_status',
-                '!=',
-                OrderItem::PRODUCTION_DONE
-            )
-            ->exists();
-
-        if (! $openItemsExist) {
-            $job->update([
-                'production_completed_at' => now(),
-            ]);
-
-            $job->syncStatusFromOutputs();
-
-            $this->releasePrintJobIfRequired($job);
-        }
     }
 
     private function releasePrintJobIfRequired(PrintJob $job): void
@@ -337,10 +289,11 @@ class Index extends Component
         }
 
         $outputIds = DB::transaction(
-            function () use ($job, $itemId, $payloadItem): array {
-                $item = OrderItem::query()
-                    ->lockForUpdate()
+            function () use ($job, $payloadItem, $itemId): array {
+                $item = RowLock::forUpdate(OrderItem::query())
                     ->findOrFail($itemId);
+
+                $openQuantity = $item->open_quantity;
 
                 $printMode = $payloadItem['print_mode']
                     ?? Product::PRINT_GROUPED;
@@ -354,7 +307,20 @@ class Index extends Component
                 $existingOutputCount = PrintOutput::query()
                     ->where('print_job_id', $job->id)
                     ->where('order_item_id', $item->id)
+                    ->where('type', PrintOutput::TYPE_PRODUCTION)
                     ->count();
+
+                $outputPayload = fn (int $quantity): array => [
+                    'table' => $job->payload['table'] ?? null,
+                    'origin' => $job->payload['origin'] ?? null,
+                    'name' => $payloadItem['name']
+                        ?? $item->product?->name
+                        ?? 'Unbekanntes Produkt',
+                    'quantity' => $quantity,
+                    'note' => $payloadItem['note']
+                        ?? $item->note,
+                    'print_mode' => $printMode,
+                ];
 
                 /*
                  * Beim Einzelbon entspricht jede fertige Einheit
@@ -363,7 +329,7 @@ class Index extends Component
                 if ($printMode === Product::PRINT_SPLIT) {
                     $desiredOutputCount = min(
                         $item->production_completed_quantity,
-                        $item->quantity
+                        $openQuantity
                     );
 
                     $outputsToCreate = max(
@@ -374,27 +340,15 @@ class Index extends Component
                     $outputIds = [];
 
                     for ($number = 0; $number < $outputsToCreate; $number++) {
-                        $output = PrintOutput::create([
+                        $outputIds[] = PrintOutput::create([
                             'print_job_id' => $job->id,
                             'order_item_id' => $item->id,
                             'printer_id' => $job->printer_id,
                             'quantity' => 1,
                             'type' => PrintOutput::TYPE_PRODUCTION,
                             'status' => PrintOutput::STATUS_PENDING,
-                            'payload' => [
-                                'table' => $job->payload['table'] ?? null,
-                                'origin' => $job->payload['origin'] ?? null,
-                                'name' => $payloadItem['name']
-                                    ?? $item->product?->name
-                                        ?? 'Unbekanntes Produkt',
-                                'quantity' => 1,
-                                'note' => $payloadItem['note']
-                                    ?? $item->note,
-                                'print_mode' => $printMode,
-                            ],
-                        ]);
-
-                        $outputIds[] = $output->id;
+                            'payload' => $outputPayload(1),
+                        ])->id;
                     }
 
                     return $outputIds;
@@ -402,37 +356,28 @@ class Index extends Component
 
                 /*
                  * Gruppenposition:
-                 * Erst wenn die gesamte Position fertig ist,
-                 * genau einen Bon mit der Gesamtmenge erzeugen.
+                 * Erst wenn die gesamte offene Menge fertig ist,
+                 * genau einen Bon mit dieser Menge erzeugen.
                  */
                 if (
-                    $item->production_completed_quantity < $item->quantity
+                    $openQuantity === 0
+                    || $item->production_completed_quantity < $openQuantity
                     || $existingOutputCount > 0
                 ) {
                     return [];
                 }
 
-                $output = PrintOutput::create([
-                    'print_job_id' => $job->id,
-                    'order_item_id' => $item->id,
-                    'printer_id' => $job->printer_id,
-                    'quantity' => $item->quantity,
-                    'type' => PrintOutput::TYPE_PRODUCTION,
-                    'status' => PrintOutput::STATUS_PENDING,
-                    'payload' => [
-                        'table' => $job->payload['table'] ?? null,
-                        'origin' => $job->payload['origin'] ?? null,
-                        'name' => $payloadItem['name']
-                            ?? $item->product?->name
-                                ?? 'Unbekanntes Produkt',
-                        'quantity' => $item->quantity,
-                        'note' => $payloadItem['note']
-                            ?? $item->note,
-                        'print_mode' => $printMode,
-                    ],
-                ]);
-
-                return [$output->id];
+                return [
+                    PrintOutput::create([
+                        'print_job_id' => $job->id,
+                        'order_item_id' => $item->id,
+                        'printer_id' => $job->printer_id,
+                        'quantity' => $openQuantity,
+                        'type' => PrintOutput::TYPE_PRODUCTION,
+                        'status' => PrintOutput::STATUS_PENDING,
+                        'payload' => $outputPayload($openQuantity),
+                    ])->id,
+                ];
             }
         );
 
@@ -448,7 +393,7 @@ class Index extends Component
                 'order.table',
                 'productionStation',
             ])
-            ->whereNull('production_completed_at')
+            ->openOnMonitor()
             ->when(
                 $this->station !== null,
                 fn ($query) => $query->where(
@@ -460,24 +405,14 @@ class Index extends Component
             ->get();
 
         /*
-         * Alle OrderItem-IDs aus allen angezeigten Bons sammeln.
-         */
-        $orderItemIds = $jobs
-            ->flatMap(
-                fn (PrintJob $job) =>
-                collect($job->payload['items'] ?? [])
-                    ->pluck('order_item_id')
-            )
-            ->filter()
-            ->unique()
-            ->values();
-
-        /*
          * Eine einzige Abfrage statt OrderItem::find() in der View.
          */
         $orderItems = OrderItem::query()
             ->with('product')
-            ->whereIn('id', $orderItemIds)
+            ->whereIn(
+                'id',
+                $jobs->flatMap(fn (PrintJob $job) => $this->payloadItemIds($job))->unique()
+            )
             ->get()
             ->keyBy('id');
 
@@ -488,17 +423,17 @@ class Index extends Component
         $jobCards = $jobs->map(function (PrintJob $job) use ($orderItems) {
             $items = collect($job->payload['items'] ?? [])
                 ->map(function (array $payloadItem) use ($orderItems) {
-                    $orderItemId = $payloadItem['order_item_id'] ?? null;
-
-                    if (! $orderItemId) {
-                        return null;
-                    }
-
-                    $orderItem = $orderItems->get((int) $orderItemId);
+                    $orderItem = $orderItems->get((int) ($payloadItem['order_item_id'] ?? 0));
 
                     if (! $orderItem) {
                         return null;
                     }
+
+                    $openQuantity = $orderItem->open_quantity;
+                    $completed = min(
+                        (int) $orderItem->production_completed_quantity,
+                        $openQuantity
+                    );
 
                     return [
                         'id' => $orderItem->id,
@@ -507,9 +442,11 @@ class Index extends Component
                             ?? $orderItem->product?->name
                             ?? 'Unbekanntes Produkt',
 
-                        'quantity' => (int) (
-                            $payloadItem['quantity']
-                            ?? $orderItem->quantity
+                        'quantity' => $openQuantity,
+
+                        'cancelled_quantity' => min(
+                            (int) $orderItem->cancelled_quantity,
+                            (int) $orderItem->quantity
                         ),
 
                         'note' => $payloadItem['note']
@@ -517,13 +454,11 @@ class Index extends Component
 
                         'print_mode' => $payloadItem['print_mode']
                             ?? $orderItem->product?->print_mode
-                            ?? \App\Models\Product::PRINT_GROUPED,
+                            ?? Product::PRINT_GROUPED,
 
-                        'production_status' =>
-                            $orderItem->production_status,
+                        'completed_quantity' => $completed,
 
-                        'production_completed_quantity' =>
-                            (int) $orderItem->production_completed_quantity,
+                        'done' => $openQuantity > 0 && $completed >= $openQuantity,
                     ];
                 })
                 ->filter()
@@ -532,6 +467,9 @@ class Index extends Component
             return [
                 'job' => $job,
                 'items' => $items,
+                'has_open_items' => $items->contains(
+                    fn (array $item): bool => $item['quantity'] > 0 && ! $item['done']
+                ),
             ];
         });
 
