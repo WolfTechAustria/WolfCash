@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Livewire\Admin\Dashboard\Index as DashboardIndex;
 use App\Livewire\Admin\Devices\Index as DevicesIndex;
 use App\Livewire\Pos\Index as PosIndex;
 use App\Livewire\Pos\StationaryIndex;
@@ -129,7 +130,7 @@ Route::get(
 
 Route::middleware('auth')->group(function () {
 
-    Route::view('/dashboard', 'dashboard')->name('dashboard');
+    Route::get('/dashboard', DashboardIndex::class)->name('dashboard');
 
     /*
     |--------------------------------------------------------------------------
@@ -139,7 +140,7 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('admin')->group(function () {
 
-        Route::view('/', 'admin.dashboard')->name('admin.dashboard');
+        Route::get('/', DashboardIndex::class)->name('admin.dashboard');
 
             // Device Management (Livewire)
             Route::get('/devices', DevicesIndex::class)
