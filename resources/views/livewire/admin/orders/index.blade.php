@@ -346,7 +346,7 @@
                     Bezahlt
                 </th>
 
-                <th class="px-4 py-3 text-right font-medium">
+                <th class="sticky right-0 bg-surface-2 px-4 py-3 text-right font-medium">
                     Aktion
                 </th>
             </tr>
@@ -393,15 +393,25 @@
                     };
                 @endphp
 
+                {{--
+                    Ganze Zeile klickbar: Die Tabelle ist breiter als der
+                    Inhaltsbereich, der Details-Button rechts liegt daher
+                    oft außerhalb des sichtbaren Ausschnitts.
+                --}}
                 <tr
                     wire:key="order-{{ $order->id }}"
-                    class="transition hover:bg-surface-2/40"
+                    x-data
+                    @click="if (! $event.target.closest('a, button')) window.location = '{{ route('admin.orders.show', $order) }}'"
+                    class="group cursor-pointer transition hover:bg-surface-2/40"
                 >
                     <td class="px-4 py-3">
                         <div class="flex flex-wrap items-center gap-2">
-                            <span class="font-medium">
+                            <a
+                                href="{{ route('admin.orders.show', $order) }}"
+                                class="font-medium hover:text-accent"
+                            >
                                 #{{ $order->id }}
-                            </span>
+                            </a>
 
                             @if($order->source === \App\Models\Order::SOURCE_SELF_ORDER)
                                 <span class="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
@@ -475,7 +485,7 @@
                         ) }} €
                     </td>
 
-                    <td class="px-4 py-3 text-right">
+                    <td class="sticky right-0 bg-ink px-4 py-3 text-right transition group-hover:bg-[color-mix(in_srgb,var(--color-surface-2)_40%,var(--color-ink))]">
                         <a
                             href="{{ route('admin.orders.show', $order) }}"
                             class="inline-flex rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-dim transition hover:border-accent hover:text-accent"
