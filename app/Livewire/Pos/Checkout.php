@@ -2,10 +2,13 @@
 
 namespace App\Livewire\Pos;
 
+use App\Exceptions\CardPaymentException;
+use App\Models\CardPayment;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\Table;
+use App\Services\CardPaymentService;
 use App\Services\PaymentReceiptService;
 use App\Services\PaymentService;
 use Illuminate\Support\Collection;
@@ -30,11 +33,11 @@ class Checkout extends Component
 
     public ?Payment $lastPayment = null;
 
-    public array $pendingCardSelection = [];
-
-    public ?float $pendingCardAmount = null;
-
-    public ?string $pendingCardMode = null;
+    /*
+     * Laufende Kartenzahlung (CardPayment-ID), solange die App
+     * die Karte einliest.
+     */
+    public ?int $pendingCardPaymentId = null;
 
     public string $invoiceRecipientName = '';
 
@@ -443,8 +446,9 @@ class Checkout extends Component
         return false;
     }
 
-    public function startSelectedCardPayment(): void
-    {
+    public function startSelectedCardPayment(
+        CardPaymentService $cardPaymentService
+    ): void {
         if (! $this->order || ! $this->ensureCardPaymentEnabled()) {
             return;
         }
@@ -471,24 +475,17 @@ class Checkout extends Component
             return;
         }
 
-        $this->pendingCardSelection =
-            $this->selectedForPayment;
-
-        $this->pendingCardAmount =
-            $amount;
-
-        $this->pendingCardMode =
-            'selected';
-
-        $this->dispatch(
-            'start-native-card-payment',
-            orderId: $this->order->id,
-            amount: $amount,
-            currency: 'EUR',
+        $this->startCardPayment(
+            $cardPaymentService,
+            CardPayment::MODE_SELECTED,
+            $this->selectedForPayment,
+            $amount
         );
     }
-    public function startRemainingCardPayment(): void
-    {
+
+    public function startRemainingCardPayment(
+        CardPaymentService $cardPaymentService
+    ): void {
         if (! $this->order || ! $this->ensureCardPaymentEnabled()) {
             return;
         }
@@ -504,34 +501,80 @@ class Checkout extends Component
             return;
         }
 
-        $this->pendingCardSelection = [];
-
-        $this->pendingCardAmount =
-            $amount;
-
-        $this->pendingCardMode =
-            'remaining';
-
-        $this->dispatch(
-            'start-native-card-payment',
-            orderId: $this->order->id,
-            amount: $amount,
-            currency: 'EUR',
+        $this->startCardPayment(
+            $cardPaymentService,
+            CardPayment::MODE_REMAINING,
+            [],
+            $amount
         );
     }
 
+    /**
+     * Legt die Kartenzahlung samt Stripe-Reservierung an und übergibt
+     * sie an die App. Betrag und Positionen stehen damit serverseitig
+     * fest; die App liest nur noch die Karte ein.
+     *
+     * @param  array<int|string, int>  $selection
+     */
+    private function startCardPayment(
+        CardPaymentService $cardPaymentService,
+        string $mode,
+        array $selection,
+        float $amount
+    ): void {
+        $this->resetErrorBag('payment');
+
+        try {
+            $started = $cardPaymentService->start(
+                $this->order,
+                $mode,
+                $selection,
+                $amount,
+                $this->invoiceRecipientPayload()
+            );
+        } catch (CardPaymentException $exception) {
+            $this->addError('payment', $exception->getMessage());
+
+            return;
+        }
+
+        $cardPayment = $started['card_payment'];
+
+        $this->pendingCardPaymentId = $cardPayment->id;
+
+        $this->dispatch(
+            'start-native-card-payment',
+            cardPaymentId: $cardPayment->id,
+            clientSecret: $started['client_secret'],
+            amount: (float) $cardPayment->amount,
+            currency: $cardPayment->currency,
+        );
+    }
+
+    /**
+     * Ergebnis aus der App. Bei Erfolg wird die Zahlung erst nach
+     * Prüfung bei Stripe verbucht und abgebucht; bei Abbruch oder
+     * Fehler wird die Reservierung storniert und es kann z. B. bar
+     * kassiert werden.
+     */
     #[On('native-card-payment-result')]
     public function handleNativeCardPaymentResult(
+        CardPaymentService $cardPaymentService,
         bool $success,
-        int $orderId,
-        ?string $transactionId = null,
+        int $cardPaymentId,
         ?string $error = null,
     ): void {
+        $this->pendingCardPaymentId = null;
+
         if (! $this->order) {
             return;
         }
 
-        if ($this->order->id !== $orderId) {
+        $cardPayment = CardPayment::query()
+            ->where('order_id', $this->order->id)
+            ->find($cardPaymentId);
+
+        if (! $cardPayment) {
             $this->addError(
                 'payment',
                 'Die Kartenzahlung gehört zu einer anderen Bestellung.'
@@ -541,31 +584,31 @@ class Checkout extends Component
         }
 
         if (! $success) {
-            $this->addError(
-                'payment',
-                $error
-                ?? 'Kartenzahlung fehlgeschlagen.'
+            $cardPaymentService->abort(
+                $cardPayment,
+                $error ?? 'In der App abgebrochen.'
             );
 
-            $this->clearPendingCardPayment();
+            $this->addError(
+                'payment',
+                ($error ?? 'Kartenzahlung fehlgeschlagen.')
+                .' Es wurde nichts abgebucht.'
+            );
 
             return;
         }
 
-        /*
-         * Vorerst bewusst NICHT paySelection()
-         * oder payRemaining() aufrufen.
-         *
-         * Hier kommt danach die echte
-         * Stripe-Verifikation hin.
-         */
-    }
+        try {
+            $payment = $cardPaymentService->complete($cardPayment);
+        } catch (CardPaymentException $exception) {
+            $this->addError('payment', $exception->getMessage());
 
-    private function clearPendingCardPayment(): void
-    {
-        $this->pendingCardSelection = [];
-        $this->pendingCardAmount = null;
-        $this->pendingCardMode = null;
+            $this->loadOrder();
+
+            return;
+        }
+
+        $this->afterPayment($payment);
     }
 
     public function backToPos()

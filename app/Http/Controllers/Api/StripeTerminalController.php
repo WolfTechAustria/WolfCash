@@ -23,4 +23,15 @@ class StripeTerminalController extends Controller
             'secret' => $token->secret,
         ]);
     }
+
+    /**
+     * Einstellungen, die die App zum Verbinden des Tap-to-Pay-
+     * Readers braucht.
+     */
+    public function config(): JsonResponse
+    {
+        return response()->json([
+            'location_id' => config('services.stripe.terminal_location_id'),
+        ]);
+    }
 }

@@ -8,6 +8,8 @@ use App\Printing\EscPosNetworkTransport;
 use App\Printing\PrintTransport;
 use App\Printing\SimulationPrintTransport;
 use App\Services\ActivityLogger;
+use App\Services\Stripe\StripeTerminalGateway;
+use App\Services\Stripe\TerminalGateway;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
@@ -37,6 +39,11 @@ class AppServiceProvider extends ServiceProvider
                     ),
                 };
             }
+        );
+
+        $this->app->bind(
+            TerminalGateway::class,
+            StripeTerminalGateway::class
         );
     }
 

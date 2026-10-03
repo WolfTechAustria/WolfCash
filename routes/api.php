@@ -62,4 +62,12 @@ Route::middleware('device.auth')
             ]
         );
 
+        Route::get(
+            '/stripe/terminal/config',
+            [
+                StripeTerminalController::class,
+                'config',
+            ]
+        );
+
     });

@@ -86,6 +86,12 @@
             </div>
             @enderror
 
+            @if($pendingCardPaymentId)
+                <div class="mb-4 rounded-lg border border-accent/60 px-3 py-2 text-sm text-accent">
+                    Kartenzahlung läuft – bitte die Karte an das Gerät halten.
+                </div>
+            @endif
+
             {{-- Summen-Kacheln --}}
             <div class="mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                 <div class="rounded-xl border border-line bg-surface p-3">
@@ -320,9 +326,18 @@
     Livewire.on(
         'start-native-card-payment',
         (event) => {
+            /*
+             * Ohne WolfCash-App (normaler Browser) gleich wieder
+             * abbrechen, damit die Reservierung storniert wird.
+             */
             if (!window.ReactNativeWebView) {
-                console.error(
-                    'Native Bridge nicht verfügbar.'
+                Livewire.dispatch(
+                    'native-card-payment-result',
+                    {
+                        success: false,
+                        cardPaymentId: event.cardPaymentId,
+                        error: 'Kartenzahlung ist nur in der WolfCash-App möglich.',
+                    }
                 );
 
                 return;
@@ -333,7 +348,8 @@
                     type: 'PAYMENT_START',
 
                     payload: {
-                        orderId: event.orderId,
+                        cardPaymentId: event.cardPaymentId,
+                        clientSecret: event.clientSecret,
                         amount: Number(event.amount),
                         currency: event.currency,
                     },
@@ -343,37 +359,46 @@
     );
 
 
-    window.addEventListener(
-        'wolfcash-native-message',
-        function (event) {
-            const message = event.detail;
+    /*
+     * Nur einen Listener behalten, auch wenn die Komponente
+     * mehrfach initialisiert wird (wire:navigate).
+     */
+    if (window.wolfcashPaymentResultListener) {
+        window.removeEventListener(
+            'wolfcash-native-message',
+            window.wolfcashPaymentResultListener
+        );
+    }
 
-            if (
-                message.type !==
-                'PAYMENT_RESULT'
-            ) {
-                return;
-            }
+    window.wolfcashPaymentResultListener = function (event) {
+        const message = event.detail;
 
-            Livewire.dispatch(
-                'native-card-payment-result',
-                {
-                    success:
+        if (
+            message.type !==
+            'PAYMENT_RESULT'
+        ) {
+            return;
+        }
+
+        Livewire.dispatch(
+            'native-card-payment-result',
+            {
+                success:
                     message.payload.success,
 
-                    orderId:
-                    message.payload.orderId,
+                cardPaymentId:
+                    message.payload.cardPaymentId,
 
-                    transactionId:
-                        message.payload.transactionId
-                        ?? null,
+                error:
+                    message.payload.error
+                    ?? null,
+            }
+        );
+    };
 
-                    error:
-                        message.payload.error
-                        ?? null,
-                }
-            );
-        }
+    window.addEventListener(
+        'wolfcash-native-message',
+        window.wolfcashPaymentResultListener
     );
 </script>
 @endscript

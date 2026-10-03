@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Schedule;
 
 
 use App\Models\MobileSessionCode;
+use App\Services\CardPaymentService;
 use App\Services\StockService;
 
 Schedule::call(function (): void {
@@ -28,4 +29,14 @@ Schedule::command('print:process')
 Schedule::call(fn () => app(StockService::class)->purgeExpired())
     ->name('stock:purge-expired-reservations')
     ->everyMinute()
+    ->withoutOverlapping();
+
+/*
+ * Nie abgeschlossene Kartenzahlungen (App beendet, WebView neu
+ * geladen, …) bei Stripe stornieren, damit die Reservierung auf
+ * der Kundenkarte freigegeben wird.
+ */
+Schedule::call(fn () => app(CardPaymentService::class)->expireStale())
+    ->name('card-payments:expire-stale')
+    ->everyFiveMinutes()
     ->withoutOverlapping();

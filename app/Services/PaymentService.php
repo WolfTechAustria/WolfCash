@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\PaymentAmountMismatchException;
 use App\Http\Middleware\EnsureFloorDevice;
 use App\Models\ActivityLog;
 use App\Models\Order;
@@ -45,12 +46,14 @@ class PaymentService
      *
      * @param array<int|string, int> $selectedForPayment
      * @param array{name: ?string, address: ?string, vat_id: ?string}|null $invoiceRecipient
+     * @param float|null $expectedAmount Muss exakt verbucht werden, sonst Rollback
      */
     public function paySelection(
         Order $order,
         array $selectedForPayment,
         string $method,
-        ?array $invoiceRecipient = null
+        ?array $invoiceRecipient = null,
+        ?float $expectedAmount = null
     ): ?Payment {
         $this->dailyClosingService->assertOpen(today());
 
@@ -58,7 +61,8 @@ class PaymentService
             $order,
             $selectedForPayment,
             $method,
-            $invoiceRecipient
+            $invoiceRecipient,
+            $expectedAmount
         ): ?Payment {
             Table::lockForBooking($order->table_id);
 
@@ -174,6 +178,21 @@ class PaymentService
                 return null;
             }
 
+            /*
+             * Kartenzahlungen sind bereits für einen festen Betrag
+             * reserviert. Weicht der Betrag inzwischen ab, wird nichts
+             * verbucht (Rollback) und die Reservierung storniert.
+             */
+            if (
+                $expectedAmount !== null
+                && abs(round($amount, 2) - round($expectedAmount, 2)) > 0.004
+            ) {
+                throw new PaymentAmountMismatchException(
+                    round($expectedAmount, 2),
+                    round($amount, 2)
+                );
+            }
+
             $payment = Payment::create([
                 'order_id' => $order->id,
                 'amount' => round($amount, 2),
@@ -206,18 +225,21 @@ class PaymentService
      * einen Beleg mit genau diesen Positionen.
      *
      * @param array{name: ?string, address: ?string, vat_id: ?string}|null $invoiceRecipient
+     * @param float|null $expectedAmount Muss exakt verbucht werden, sonst Rollback
      */
     public function payRemaining(
         Order $order,
         string $method,
-        ?array $invoiceRecipient = null
+        ?array $invoiceRecipient = null,
+        ?float $expectedAmount = null
     ): ?Payment {
         $this->dailyClosingService->assertOpen(today());
 
         return DB::transaction(function () use (
             $order,
             $method,
-            $invoiceRecipient
+            $invoiceRecipient,
+            $expectedAmount
         ): ?Payment {
             Table::lockForBooking($order->table_id);
 
@@ -266,6 +288,21 @@ class PaymentService
 
             if ($amount <= 0 || $receiptItems === []) {
                 return null;
+            }
+
+            /*
+             * Kartenzahlungen sind bereits für einen festen Betrag
+             * reserviert. Weicht der Betrag inzwischen ab, wird nichts
+             * verbucht (Rollback) und die Reservierung storniert.
+             */
+            if (
+                $expectedAmount !== null
+                && abs(round($amount, 2) - round($expectedAmount, 2)) > 0.004
+            ) {
+                throw new PaymentAmountMismatchException(
+                    round($expectedAmount, 2),
+                    round($amount, 2)
+                );
             }
 
             $payment = Payment::create([

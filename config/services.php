@@ -38,6 +38,9 @@ return [
     'stripe' => [
         'secret' => env('STRIPE_SECRET_KEY'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+
+        // Stripe Terminal Location für Tap to Pay (tml_…)
+        'terminal_location_id' => env('STRIPE_TERMINAL_LOCATION_ID'),
     ],
 
 ];

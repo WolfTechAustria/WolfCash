@@ -56,6 +56,7 @@ class SystemResetService
             'order_items',
             'order_item_cancellations',
             'payments',
+            'card_payments',
             'print_jobs',
             'print_outputs',
             'self_orders',

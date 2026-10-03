@@ -12,8 +12,10 @@ use App\Models\ProductGroup;
 use App\Models\Setting;
 use App\Models\Table;
 use App\Models\User;
+use App\Services\Stripe\TerminalGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\Fakes\FakeTerminalGateway;
 use Tests\TestCase;
 
 class CardPaymentSettingTest extends TestCase
@@ -41,6 +43,8 @@ class CardPaymentSettingTest extends TestCase
 
     public function test_card_payment_is_enabled_by_default(): void
     {
+        $this->app->instance(TerminalGateway::class, new FakeTerminalGateway());
+
         $this->assertTrue(Setting::cardPaymentEnabled());
 
         Livewire::test(Checkout::class, ['table' => $this->tableWithOpenOrder()])
