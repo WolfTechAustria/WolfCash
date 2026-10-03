@@ -23,11 +23,15 @@
         <div class="mt-[1.45em]">
             @foreach($document->lines as $line)
                 @php $formatted = $line instanceof \App\Printing\PrintLine; @endphp
-                <div @class([
-                    'min-h-[1.45em] whitespace-pre-wrap break-words',
-                    'font-bold' => $formatted && $line->bold,
-                    'text-center' => $formatted && $line->center,
-                ])>{{ $line }}</div>
+                @if($formatted && $line->size !== \App\Enums\PrintTextSize::Normal)
+                    <x-print-jobs.scaled-line :line="$line" />
+                @else
+                    <div @class([
+                        'min-h-[1.45em] whitespace-pre-wrap break-words',
+                        'font-bold' => $formatted && $line->bold,
+                        'text-center' => $formatted && $line->center,
+                    ])>{{ $line }}</div>
+                @endif
             @endforeach
         </div>
 

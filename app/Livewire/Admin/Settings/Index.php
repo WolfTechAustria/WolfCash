@@ -2,9 +2,12 @@
 
 namespace App\Livewire\Admin\Settings;
 
+use App\Enums\PrintTextSize;
 use App\Models\ActivityLog;
 use App\Models\Printer;
 use App\Models\Setting;
+use App\Printing\PrintLine;
+use App\Printing\RenderedPrint;
 use App\Services\ActivityLogger;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -33,8 +36,16 @@ class Index extends Component
 
     public ?int $stationaryPrinterId = null;
 
+    public string $printTableTextSize = 'normal';
+
+    public string $printProductTextSize = 'normal';
+
     public function mount(): void
     {
+        $this->printTableTextSize = Setting::printTableTextSize()->value;
+
+        $this->printProductTextSize = Setting::printProductTextSize()->value;
+
         $this->automaticReceiptPrintingEnabled =
             Setting::automaticReceiptPrintingEnabled();
 
@@ -108,6 +119,14 @@ class Index extends Component
                 'integer',
                 Rule::exists('printers', 'id'),
             ],
+            'printTableTextSize' => [
+                'required',
+                Rule::enum(PrintTextSize::class),
+            ],
+            'printProductTextSize' => [
+                'required',
+                Rule::enum(PrintTextSize::class),
+            ],
         ]);
 
         $before = Setting::query()->pluck('value', 'key');
@@ -169,6 +188,16 @@ class Index extends Component
             $this->stationaryPrinterId
         );
 
+        Setting::putValue(
+            Setting::PRINT_TABLE_TEXT_SIZE,
+            $this->printTableTextSize
+        );
+
+        Setting::putValue(
+            Setting::PRINT_PRODUCT_TEXT_SIZE,
+            $this->printProductTextSize
+        );
+
         $changes = Setting::query()
             ->pluck('value', 'key')
             ->filter(fn (?string $value, string $key) => $before->get($key) !== $value)
@@ -191,6 +220,34 @@ class Index extends Component
         );
     }
 
+    /**
+     * Beispiel-Produktionsbon mit den noch ungespeicherten Größen,
+     * damit die Auswirkung schon vor dem Speichern sichtbar ist.
+     */
+    private function productionPreview(): RenderedPrint
+    {
+        $tableSize = PrintTextSize::tryFrom($this->printTableTextSize)
+            ?? PrintTextSize::Normal;
+
+        $productSize = PrintTextSize::tryFrom($this->printProductTextSize)
+            ?? PrintTextSize::Normal;
+
+        return new RenderedPrint(
+            title: 'Produktionsbon',
+            lines: [
+                new PrintLine('TISCH 12', bold: true, center: true, size: $tableSize),
+                'SCHANK',
+                now()->format('d.m.Y H:i'),
+                str_repeat('-', 32),
+                new PrintLine('2x Bier', bold: true, size: $productSize),
+                new PrintLine('1x Spritzer weiß sauer', bold: true, size: $productSize),
+                '  > ohne Eis',
+                str_repeat('-', 32),
+                'Bon #123',
+            ],
+        );
+    }
+
     public function render()
     {
         return view(
@@ -199,6 +256,8 @@ class Index extends Component
                 'printers' => Printer::query()
                     ->orderBy('name')
                     ->get(),
+                'textSizes' => PrintTextSize::cases(),
+                'productionPreview' => $this->productionPreview(),
             ]
         )->layout('components.layouts.app');
     }

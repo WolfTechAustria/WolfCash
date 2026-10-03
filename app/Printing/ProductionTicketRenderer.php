@@ -99,7 +99,7 @@ class ProductionTicketRenderer
 
             $note = $item['note'] ?? null;
 
-            $lines[] = PrintLine::bold($quantity.'x '.$name);
+            $lines[] = PrintLine::product($quantity.'x '.$name);
 
             if ($note) {
                 $lines[] = '  > '.$note;
@@ -131,7 +131,7 @@ class ProductionTicketRenderer
 
         $note = $item['note'] ?? null;
 
-        $lines[] = PrintLine::bold('1x '.$name);
+        $lines[] = PrintLine::product('1x '.$name);
 
         if ($note) {
             $lines[] = '  > '.$note;
@@ -231,7 +231,7 @@ class ProductionTicketRenderer
             $job->created_at->format('d.m.Y H:i'),
             str_repeat('-', 32),
 
-            $article['quantity'].'x '.$article['name'],
+            PrintLine::product($article['quantity'].'x '.$article['name'], bold: false),
         ];
 
         foreach ($article['notes'] as $note) {
@@ -299,7 +299,7 @@ class ProductionTicketRenderer
             $job->created_at->format('d.m.Y H:i'),
             str_repeat('-', 32),
 
-            '1x '.$name,
+            PrintLine::product('1x '.$name, bold: false),
         ];
 
         if ($note) {
@@ -351,7 +351,7 @@ class ProductionTicketRenderer
             $job->order?->table?->number ?? '–';
 
         $lines = [
-            PrintLine::boldCentered('TISCH '.$tableNumber),
+            PrintLine::table('TISCH '.$tableNumber),
         ];
 
         if ($job->productionStation) {

@@ -427,6 +427,19 @@ Jedes Tablet oder Handy, das die Kasse öffnet, meldet sich hier automatisch an 
 
 ![Einstellungen](screenshots/20-einstellungen.png)
 
+### Schriftgröße am Bon
+
+Tischnummer und Produkte auf Produktions-, Storno- und Selbstbedienungsbons lassen sich getrennt vergrößern. Die Vorschau daneben zeigt das Ergebnis schon vor dem Speichern. Zahlungsbelege bleiben unverändert.
+
+| Größe | Zeichen pro Zeile |
+|---|---|
+| **Normal** (Standard) | 32 |
+| **Doppelt hoch** | 32 – gut lesbar, lange Produktnamen bleiben in einer Zeile |
+| **Doppelt groß** | 16 |
+| **Dreifach groß** | 10 |
+
+Längere Texte werden bei „Doppelt“ und „Dreifach groß“ automatisch umgebrochen.
+
 ### Zahlungsbelege
 
 | Schalter | Wirkung | Standard |

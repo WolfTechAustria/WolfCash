@@ -87,7 +87,12 @@ class EscPosNetworkTransport implements PrintTransport
                 }
 
                 $escPos->setEmphasis($line->bold);
+                $escPos->setTextSize(
+                    $line->size->width(),
+                    $line->size->height()
+                );
                 $escPos->text($line->text."\n");
+                $escPos->setTextSize(1, 1);
                 $escPos->setEmphasis(false);
 
                 if ($line->center) {
