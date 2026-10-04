@@ -46,6 +46,21 @@
                         'printing' => ['bg-accent/15 text-accent', 'Druckt…'],
                         default => ['bg-surface-2 text-dim', 'Ausstehend'],
                     };
+
+                    $outputStatus = fn (string $status) => match($status) {
+                        'printed' => ['text-free', 'gedruckt'],
+                        'failed' => ['text-occupied', 'Fehler'],
+                        'printing' => ['text-accent', 'druckt…'],
+                        default => ['text-dim', 'ausstehend'],
+                    };
+
+                    /*
+                     * Nachdrucke/Stornobons sind weitere Ausgaben am selben
+                     * Job — der letzte wird in der Zeile hervorgehoben.
+                     */
+                    $lastOutput = $job->outputs->last();
+                    $showLastOutput = $lastOutput
+                        && ($job->outputs->count() > 1 || $lastOutput->created_at->diffInSeconds($job->created_at, true) > 5);
                 @endphp
 
                 <tr
@@ -59,7 +74,15 @@
                         </svg>
                     </td>
                     <td class="px-4 py-3 text-dim">#{{ $job->id }}</td>
-                    <td class="px-4 py-3 tabular-nums">{{ $job->created_at->format('H:i:s') }}</td>
+                    <td class="px-4 py-3 tabular-nums">
+                        {{ $job->created_at->format('H:i:s') }}
+                        @if($showLastOutput)
+                            <div class="whitespace-nowrap text-xs text-accent">
+                                {{ \App\Livewire\Admin\PrintJobs\Index::outputLabel($lastOutput) }}
+                                {{ $lastOutput->created_at->isSameDay($job->created_at) ? $lastOutput->created_at->format('H:i:s') : $lastOutput->created_at->format('d.m. H:i') }}
+                            </div>
+                        @endif
+                    </td>
                     <td class="px-4 py-3">{{ $job->order?->table?->number }}</td>
                     <td class="px-4 py-3 text-dim">{{ $job->printer?->name }}</td>
                     <td class="px-4 py-3 text-dim">
@@ -76,6 +99,13 @@
                     </td>
                     <td class="px-4 py-3">
                         <span class="whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium {{ $badge[0] }}">{{ $badge[1] }}</span>
+                        @if($showLastOutput)
+                            @php $lastStatus = $outputStatus($lastOutput->status); @endphp
+                            <div class="mt-1 whitespace-nowrap text-xs text-dim">
+                                {{ $job->outputs->count() }} {{ $job->outputs->count() === 1 ? 'Ausdruck' : 'Ausdrucke' }}
+                                · letzter <span class="{{ $lastStatus[0] }}">{{ $lastStatus[1] }}</span>
+                            </div>
+                        @endif
                         @if($job->error_message)
                             <div class="mt-1 max-w-xs text-xs text-occupied {{ $isOpen ? '' : 'truncate' }}">{{ $job->error_message }}</div>
                         @endif
@@ -121,6 +151,34 @@
                                             :label="count($documents) > 1 ? 'Bon '.$loop->iteration.'/'.count($documents) : null"
                                         />
                                     @endforeach
+                                </div>
+                            @endif
+
+                            @if($job->outputs->isNotEmpty())
+                                <div class="mt-5">
+                                    <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-dim">Ausdrucke</h3>
+
+                                    <div class="overflow-x-auto rounded-xl border border-line">
+                                        <table class="w-full text-xs">
+                                            <tbody class="divide-y divide-line">
+                                            @foreach($job->outputs->reverse() as $output)
+                                                @php $status = $outputStatus($output->status); @endphp
+                                                <tr wire:key="job-{{ $job->id }}-output-{{ $output->id }}">
+                                                    <td class="px-3 py-2 text-dim">#{{ $output->id }}</td>
+                                                    <td class="px-3 py-2 tabular-nums">{{ $output->created_at->format('d.m. H:i:s') }}</td>
+                                                    <td class="px-3 py-2">{{ \App\Livewire\Admin\PrintJobs\Index::outputLabel($output) }}</td>
+                                                    <td class="px-3 py-2 text-dim">{{ $output->printer?->name }}</td>
+                                                    <td class="px-3 py-2">
+                                                        <span class="{{ $status[0] }}">{{ $status[1] }}</span>
+                                                        @if($output->error_message)
+                                                            <div class="text-occupied">{{ $output->error_message }}</div>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             @endif
 
