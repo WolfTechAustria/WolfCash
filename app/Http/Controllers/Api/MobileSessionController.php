@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\MobileSessionCode;
+use App\Support\LocalNetwork;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -47,13 +48,7 @@ class MobileSessionController extends Controller
      */
     private function webBaseUrl(Request $request): string
     {
-        $host = $request->getHost();
-
-        $isPrivateIp =
-            filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false
-            && filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE) === false;
-
-        if ($isPrivateIp) {
+        if (LocalNetwork::isPrivateHost($request->getHost())) {
             return $request->getSchemeAndHttpHost();
         }
 

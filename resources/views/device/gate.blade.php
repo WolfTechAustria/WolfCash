@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#17140f">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    @include('partials.upgrade-insecure-requests')
 
     <title>WolfCash · Gerätefreigabe</title>
 
@@ -53,17 +53,36 @@
         const STORAGE_KEY = 'device_fingerprint';
         const COOKIE = @json(\App\Http\Middleware\EnsureFloorDevice::COOKIE);
 
+        /*
+         * crypto.randomUUID() gibt es nur auf HTTPS-Seiten, im lokalen
+         * Netz (http://<private IP>) daher aus getRandomValues bauen.
+         */
+        const randomUuid = () => {
+            if (typeof crypto.randomUUID === 'function') {
+                return crypto.randomUUID();
+            }
+
+            const bytes = crypto.getRandomValues(new Uint8Array(16));
+            bytes[6] = (bytes[6] & 0x0f) | 0x40;
+            bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+            const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+
+            return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16)
+                + '-' + hex.slice(16, 20) + '-' + hex.slice(20);
+        };
+
         let fingerprint = null;
 
         try {
             fingerprint = localStorage.getItem(STORAGE_KEY);
 
             if (!fingerprint) {
-                fingerprint = crypto.randomUUID();
+                fingerprint = randomUuid();
                 localStorage.setItem(STORAGE_KEY, fingerprint);
             }
         } catch (e) {
-            fingerprint = crypto.randomUUID();
+            fingerprint = randomUuid();
         }
 
         /*

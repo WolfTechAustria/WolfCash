@@ -22,6 +22,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->trustProxies(at: '*');
 
+        /*
+         * Vor StartSession: Session-Cookie im lokalen Netz ohne Secure.
+         */
+        $middleware->web(prepend: [
+            \App\Http\Middleware\AllowLocalNetworkHttp::class,
+        ]);
+
         $middleware->validateCsrfTokens(
             except: [
                 'stripe/webhook',
