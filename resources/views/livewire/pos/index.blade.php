@@ -158,8 +158,9 @@
                             @if($occupied)
 
                                 <span class="rounded-full bg-occupied/20 px-2.5 py-0.5 text-sm font-medium text-occupied">
+                                    {{-- Nur der noch offene Betrag, Teilzahlungen sind abgezogen. --}}
                                     {{ number_format(
-                                        $tableItem->openOrder->total,
+                                        (float) $tableItem->openOrder->open_amount,
                                         2,
                                         ',',
                                         '.'

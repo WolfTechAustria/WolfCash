@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
@@ -42,6 +43,20 @@ class Order extends Model
     public function printJobs()
     {
         return $this->hasMany(PrintJob::class);
+    }
+
+    /**
+     * Lädt den noch unbezahlten Betrag als open_amount mit — gleiche
+     * Rechnung wie in closeIfSettled(), aber ohne Abfrage pro Bestellung.
+     */
+    public function scopeWithOpenAmount(Builder $query): void
+    {
+        $query->addSelect([
+            'open_amount' => OrderItem::query()
+                ->selectRaw('COALESCE(SUM((quantity - cancelled_quantity) * price), 0)')
+                ->whereColumn('order_items.order_id', 'orders.id')
+                ->whereNull('paid_at'),
+        ]);
     }
 
     public function recalculateTotal(): void
