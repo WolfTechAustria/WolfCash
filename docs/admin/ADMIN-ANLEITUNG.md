@@ -259,6 +259,10 @@ Die Detailseite zeigt:
 
 **Beleg nachdrucken:** Klicke bei der Zahlung auf **Beleg drucken** und bestätige die Rückfrage. Nachdrucke werden als **Belegkopie** gekennzeichnet. Der Button ist ausgegraut, wenn der manuelle Belegdruck in den Einstellungen deaktiviert ist oder für ältere Zahlungen kein Beleg gespeichert wurde.
 
+**Position nachträglich stornieren:** Bei jeder Position mit offener Menge gibt es den Button **Stornieren**. Menge und Grund eingeben und bestätigen – der Bestand wird zurückgebucht und die Bestellsumme neu berechnet. Ein Stornobon für die Küche wird nur gedruckt, wenn das Häkchen gesetzt ist.
+
+Ist die Position bereits bezahlt, wird die Zahlung um den stornierten Betrag reduziert. Ein anschließend gedruckter Beleg zeigt den korrigierten Gesamtbetrag, die stornierten Positionen unter **STORNIERT** und das Korrekturdatum. Den Betrag gibst du dem Gast selbst zurück (bei Kartenzahlung über das Kartenterminal). Wurde die Zahlung an einem bereits abgeschlossenen Tag gemacht, ist kein Storno mehr möglich.
+
 ### 5.3 Stornos
 
 **Menü:** Bestellungen → Stornos

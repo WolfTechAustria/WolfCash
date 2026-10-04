@@ -3,11 +3,14 @@
 namespace App\Livewire\Admin\Orders;
 
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\PrintJob;
 use App\Models\PrintOutput;
 use App\Models\Setting;
+use App\Services\OrderCancellationService;
 use App\Services\PaymentReceiptService;
+use InvalidArgumentException;
 use Livewire\Component;
 use RuntimeException;
 use Throwable;
@@ -17,6 +20,14 @@ class Show extends Component
     public Order $order;
 
     public ?int $reprintingPaymentId = null;
+
+    public ?int $cancellationItemId = null;
+
+    public int $cancellationQuantity = 1;
+
+    public string $cancellationReason = '';
+
+    public bool $cancellationPrintTicket = false;
 
     public function mount(
         Order $order
@@ -117,6 +128,114 @@ class Show extends Component
         } finally {
             $this->reprintingPaymentId = null;
         }
+    }
+
+    /**
+     * Nachträgliches Storno aus dem Admin, z. B. wenn die Bestellung
+     * schon bezahlt und der Tisch an der Kassa nicht mehr offen ist.
+     */
+    public function openCancellation(int $itemId): void
+    {
+        $item = $this->order->items->firstWhere('id', $itemId);
+
+        if (! $item || $item->open_quantity <= 0) {
+            return;
+        }
+
+        $this->cancellationItemId = $item->id;
+        $this->cancellationQuantity = $item->open_quantity;
+        $this->cancellationReason = '';
+        $this->cancellationPrintTicket = false;
+
+        $this->resetValidation();
+    }
+
+    public function closeCancellation(): void
+    {
+        $this->cancellationItemId = null;
+
+        $this->resetValidation();
+    }
+
+    public function getCancellationItemProperty(): ?OrderItem
+    {
+        if ($this->cancellationItemId === null) {
+            return null;
+        }
+
+        return $this->order->items->firstWhere(
+            'id',
+            $this->cancellationItemId
+        );
+    }
+
+    public function confirmCancellation(
+        OrderCancellationService $cancellationService
+    ): void {
+        $item = $this->cancellationItem;
+
+        if (! $item) {
+            $this->closeCancellation();
+
+            return;
+        }
+
+        $this->validate([
+            'cancellationQuantity' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:'.$item->open_quantity,
+            ],
+            'cancellationReason' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+        ], [
+            'cancellationQuantity.max' =>
+                'Es können höchstens '
+                .$item->open_quantity
+                .' Stück storniert werden.',
+
+            'cancellationReason.required' =>
+                'Bitte einen Stornogrund angeben.',
+        ]);
+
+        try {
+            $cancellationService->cancel(
+                item: $item,
+                quantity: $this->cancellationQuantity,
+                reason: $this->cancellationReason,
+                userId: auth()->id(),
+                printCancellationTicket: $this->cancellationPrintTicket,
+            );
+        } catch (Throwable $exception) {
+            if (! $exception instanceof RuntimeException
+                && ! $exception instanceof InvalidArgumentException) {
+                report($exception);
+            }
+
+            $this->addError(
+                'cancellationReason',
+                $exception->getMessage()
+            );
+
+            return;
+        }
+
+        session()->flash(
+            'cancellationSuccess',
+            $this->cancellationQuantity.'× '
+            .($item->product?->name ?? 'Position')
+            .' wurde storniert.'
+        );
+
+        $this->closeCancellation();
+
+        $this->order->refresh();
+
+        $this->loadOrder();
     }
 
     public function getGrossAmountProperty(): float

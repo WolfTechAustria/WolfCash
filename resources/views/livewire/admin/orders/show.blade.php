@@ -157,6 +157,12 @@
 
         </div>
 
+        @if(session('cancellationSuccess'))
+            <div class="mb-3 rounded-xl border border-free/40 bg-free-soft px-4 py-3 text-sm text-free">
+                {{ session('cancellationSuccess') }}
+            </div>
+        @endif
+
         <div class="space-y-3">
 
             @forelse($order->items as $item)
@@ -242,6 +248,16 @@
                                         '.'
                                     ) }} € / Stück
                                 </p>
+
+                                @if($item->open_quantity > 0)
+                                    <button
+                                        type="button"
+                                        wire:click="openCancellation({{ $item->id }})"
+                                        class="mt-2 rounded-full border border-occupied/40 px-3 py-1 text-xs font-medium text-occupied transition hover:bg-occupied/10"
+                                    >
+                                        Stornieren
+                                    </button>
+                                @endif
 
                             </div>
 
@@ -845,5 +861,147 @@
         </div>
 
     </section>
+
+    {{-- Nachträgliches Storno --}}
+    @if($this->cancellationItem)
+        @php $cancelItem = $this->cancellationItem; @endphp
+
+        <div
+            class="fixed inset-0 z-[9999] flex items-end justify-center bg-black/80 sm:items-center sm:p-4"
+            wire:keydown.escape.window="closeCancellation"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-cancellation-title"
+        >
+            <button
+                type="button"
+                wire:click="closeCancellation"
+                class="absolute inset-0 z-0 cursor-default"
+                aria-label="Storno schließen"
+            ></button>
+
+            <form
+                wire:submit="confirmCancellation"
+                class="relative z-10 flex max-h-[calc(100dvh-1rem)] w-full flex-col overflow-hidden rounded-t-3xl border border-line bg-ink-soft shadow-2xl sm:max-w-md sm:rounded-3xl"
+            >
+                <div class="shrink-0 border-b border-line px-5 py-4">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-occupied">
+                                Position #{{ $cancelItem->id }} stornieren
+                            </p>
+
+                            <h2 id="admin-cancellation-title" class="mt-1 truncate font-display text-xl font-semibold">
+                                {{ $cancelItem->product?->name ?? 'Unbekanntes Produkt' }}
+                            </h2>
+
+                            <p class="mt-1 text-sm text-dim">
+                                Noch {{ $cancelItem->open_quantity }} Stück verrechenbar
+                                · {{ number_format($cancelItem->price, 2, ',', '.') }} € / Stück
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            wire:click="closeCancellation"
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-dim transition hover:border-accent hover:text-accent"
+                            aria-label="Schließen"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                </div>
+
+                <div class="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4">
+
+                    @if($cancelItem->paid_at)
+                        <div class="rounded-xl border border-occupied/30 bg-occupied-soft px-3 py-2 text-sm text-occupied">
+                            Diese Position ist bereits bezahlt. Die Zahlung wird um
+                            {{ number_format((float) $cancelItem->price * max(1, (int) $cancellationQuantity), 2, ',', '.') }} €
+                            reduziert, der Zahlungsbeleg kann danach korrigiert nachgedruckt werden.
+                            Den Betrag bitte an den Gast zurückgeben – bei Kartenzahlung über das Kartenterminal.
+                        </div>
+                    @endif
+
+                    <div>
+                        <label for="cancellationQuantity" class="mb-2 block text-sm font-medium">
+                            Stornomenge
+                        </label>
+
+                        <input
+                            id="cancellationQuantity"
+                            type="number"
+                            min="1"
+                            max="{{ $cancelItem->open_quantity }}"
+                            wire:model.live="cancellationQuantity"
+                            class="w-full rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-fg tabular-nums outline-none transition focus:border-accent"
+                        >
+
+                        @error('cancellationQuantity')
+                            <p class="mt-1 text-xs text-occupied">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="cancellationReason" class="mb-2 block text-sm font-medium">
+                            Stornogrund
+                        </label>
+
+                        <input
+                            id="cancellationReason"
+                            type="text"
+                            maxlength="255"
+                            wire:model="cancellationReason"
+                            placeholder="z. B. Falsch boniert"
+                            class="w-full rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-fg outline-none transition focus:border-accent"
+                        >
+
+                        @error('cancellationReason')
+                            <p class="mt-1 text-xs text-occupied">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <label class="flex items-start gap-3 text-sm">
+                        <input
+                            type="checkbox"
+                            wire:model="cancellationPrintTicket"
+                            class="mt-0.5 h-4 w-4"
+                        >
+                        <span>
+                            Stornobon an die Küche drucken
+                            <span class="block text-xs text-dim">
+                                Nur nötig, wenn die Position noch nicht zubereitet wurde.
+                            </span>
+                        </span>
+                    </label>
+
+                    <p class="text-xs text-dim">
+                        Der Bestand wird zurückgebucht und die Bestellsumme neu berechnet.
+                        Ist der Zahlungstag bereits abgeschlossen, ist kein Storno mehr möglich.
+                    </p>
+
+                </div>
+
+                <div class="flex shrink-0 justify-end gap-2 border-t border-line px-5 py-4">
+                    <button
+                        type="button"
+                        wire:click="closeCancellation"
+                        class="rounded-xl border border-line px-4 py-2.5 text-sm font-medium text-dim transition hover:text-fg"
+                    >
+                        Abbrechen
+                    </button>
+
+                    <button
+                        type="submit"
+                        wire:loading.attr="disabled"
+                        wire:target="confirmCancellation"
+                        class="rounded-xl bg-occupied px-4 py-2.5 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
+                    >
+                        {{ max(1, (int) $cancellationQuantity) }}× stornieren
+                    </button>
+                </div>
+            </form>
+        </div>
+    @endif
 
 </div>

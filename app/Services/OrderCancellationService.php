@@ -10,6 +10,7 @@ use App\Models\Table;
 use App\Support\RowLock;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use RuntimeException;
 use App\Models\OrderItemCancellation;
 use App\Jobs\ProcessPrintOutput;
 use App\Models\PrintJob;
@@ -25,8 +26,17 @@ class OrderCancellationService
     ) {
     }
 
-    public function cancel(OrderItem $item, int $quantity, string $reason, ?int $userId = null): OrderItem
-    {
+    /**
+     * @param bool $printCancellationTicket false für nachträgliche
+     *        Stornos im Admin, bei denen die Küche nichts mehr tun muss.
+     */
+    public function cancel(
+        OrderItem $item,
+        int $quantity,
+        string $reason,
+        ?int $userId = null,
+        bool $printCancellationTicket = true,
+    ): OrderItem {
         $this->dailyClosingService->assertOpen(today());
 
         if ($quantity <= 0) {
@@ -47,7 +57,8 @@ class OrderCancellationService
             $item,
             $quantity,
             $reason,
-            $userId
+            $userId,
+            $printCancellationTicket
         ): OrderItem {
             Table::lockForBooking(
                 (int) Order::query()->whereKey($item->order_id)->value('table_id')
@@ -69,6 +80,38 @@ class OrderCancellationService
                 );
             }
 
+            /*
+             * Bereits bezahlte Position: Zahlung und gespeicherter
+             * Beleg werden um das Storno reduziert, damit Kassastand
+             * und Belegnachdruck stimmen. Ist der Zahlungstag schon
+             * abgeschlossen, wird abgelehnt — der gespeicherte
+             * Tagesabschluss würde sonst nicht mehr stimmen.
+             */
+            $paymentId = $this->paymentIdFor($lockedItem);
+
+            $payment = $paymentId
+                ? RowLock::forUpdate(Payment::query())
+                    ->find($paymentId)
+                : null;
+
+            if ($payment) {
+                if ($this->dailyClosingService->isClosed($payment->created_at)) {
+                    throw new RuntimeException(
+                        'Die Position wurde am '
+                        .$payment->created_at->format('d.m.Y')
+                        .' bezahlt und dieser Tag ist bereits abgeschlossen. '
+                        .'Ein Storno ist nicht mehr möglich.'
+                    );
+                }
+
+                $this->reducePayment(
+                    payment: $payment,
+                    item: $lockedItem,
+                    quantity: $quantity,
+                    reason: $reason,
+                );
+            }
+
             $newCancelledQuantity =
                 $lockedItem->cancelled_quantity + $quantity;
 
@@ -84,7 +127,7 @@ class OrderCancellationService
              * außer bei per Bon bezahlten Positionen, die bereits beim
              * Einlösen zurückgebucht wurden.
              */
-            if ($lockedItem->payment?->payment_method !== Payment::VOUCHER) {
+            if ($payment?->payment_method !== Payment::VOUCHER) {
                 $this->stockService->restock(
                     $lockedItem->product_id,
                     $quantity
@@ -99,10 +142,12 @@ class OrderCancellationService
                 'cancelled_at' => now(),
             ]);
 
-            $this->createCancellationOutputs(
-                item: $lockedItem,
-                cancellation: $cancellation,
-            );
+            if ($printCancellationTicket) {
+                $this->createCancellationOutputs(
+                    item: $lockedItem,
+                    cancellation: $cancellation,
+                );
+            }
 
             /*
              * Offene Bons am Küchenmonitor zeigen die stornierte
@@ -135,6 +180,7 @@ class OrderCancellationService
                     'quantity' => $quantity,
                     'amount' => round((float) $lockedItem->price * $quantity, 2),
                     'reason' => $reason,
+                    'payment_id' => $payment?->id,
                 ],
                 $userId,
             );
@@ -144,6 +190,142 @@ class OrderCancellationService
                 'order',
             ]);
         });
+    }
+
+    /**
+     * Positionen, die vor Einführung von order_items.payment_id bezahlt
+     * wurden, haben nur paid_at. Dann über den Beleg-Snapshot zuordnen,
+     * der diese Position enthält, sonst über die einzige Zahlung.
+     */
+    private function paymentIdFor(OrderItem $item): ?int
+    {
+        if ($item->payment_id) {
+            return (int) $item->payment_id;
+        }
+
+        if ($item->paid_at === null) {
+            return null;
+        }
+
+        $receiptJobs = PrintJob::query()
+            ->where('order_id', $item->order_id)
+            ->where('type', PrintJob::TYPE_RECEIPT)
+            ->whereNotNull('payment_id')
+            ->get();
+
+        foreach ($receiptJobs as $job) {
+            $containsItem = collect($job->payload['items'] ?? [])->contains(
+                fn (array $line): bool =>
+                    (int) ($line['order_item_id'] ?? 0) === $item->id
+            );
+
+            if ($containsItem) {
+                return (int) $job->payment_id;
+            }
+        }
+
+        $paymentIds = Payment::query()
+            ->where('order_id', $item->order_id)
+            ->pluck('id');
+
+        return $paymentIds->count() === 1
+            ? (int) $paymentIds->first()
+            : null;
+    }
+
+    /**
+     * Zieht den stornierten Betrag von der Zahlung ab und korrigiert
+     * den gespeicherten Beleg-Snapshot, damit ein Nachdruck den
+     * tatsächlich bezahlten Betrag samt Storno-Hinweis zeigt.
+     */
+    private function reducePayment(
+        Payment $payment,
+        OrderItem $item,
+        int $quantity,
+        string $reason
+    ): void {
+        $refund = round((float) $item->price * $quantity, 2);
+
+        $payment->update([
+            'amount' => max(0, round((float) $payment->amount - $refund, 2)),
+        ]);
+
+        $receiptJob = PrintJob::query()
+            ->where('payment_id', $payment->id)
+            ->where('type', PrintJob::TYPE_RECEIPT)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $receiptJob) {
+            return;
+        }
+
+        $payload = $receiptJob->payload ?? [];
+        $items = array_values($payload['items'] ?? []);
+
+        $lineIndex = $this->receiptLineIndex($items, $item);
+
+        if ($lineIndex !== null) {
+            $line = $items[$lineIndex];
+            $remaining = max(0, (int) ($line['quantity'] ?? 0) - $quantity);
+
+            if ($remaining === 0) {
+                array_splice($items, $lineIndex, 1);
+            } else {
+                $items[$lineIndex]['quantity'] = $remaining;
+                $items[$lineIndex]['total'] = round(
+                    (float) ($line['unit_price'] ?? $item->price) * $remaining,
+                    2
+                );
+            }
+        }
+
+        $payload['items'] = $items;
+        $payload['amount'] = round((float) $payment->amount, 2);
+        $payload['corrected_at'] = now()->toIso8601String();
+        $payload['cancellations'] = [
+            ...($payload['cancellations'] ?? []),
+            [
+                'order_item_id' => $item->id,
+                'name' => $item->product?->name ?? 'Unbekanntes Produkt',
+                'quantity' => $quantity,
+                'unit_price' => round((float) $item->price, 2),
+                'total' => $refund,
+                'reason' => $reason,
+                'cancelled_at' => now()->toIso8601String(),
+            ],
+        ];
+
+        $receiptJob->update([
+            'payload' => $payload,
+        ]);
+    }
+
+    /**
+     * Bei Teilzahlungen verweist der Snapshot auf die ursprüngliche
+     * (unbezahlte) Position statt auf die abgespaltene bezahlte —
+     * deshalb ersatzweise über Produkt und Preis zuordnen.
+     *
+     * @param array<int, array<string, mixed>> $items
+     */
+    private function receiptLineIndex(array $items, OrderItem $item): ?int
+    {
+        foreach ($items as $index => $line) {
+            if ((int) ($line['order_item_id'] ?? 0) === $item->id) {
+                return $index;
+            }
+        }
+
+        foreach ($items as $index => $line) {
+            if (
+                (int) ($line['product_id'] ?? 0) === (int) $item->product_id
+                && abs((float) ($line['unit_price'] ?? 0) - (float) $item->price) < 0.005
+            ) {
+                return $index;
+            }
+        }
+
+        return null;
     }
 
     private function createCancellationOutputs(

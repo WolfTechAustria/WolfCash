@@ -245,9 +245,15 @@ class PrintOutputRenderer
             'Bestellung: #'.$orderId,
             'Tisch: '.$tableNumber,
             'Datum: '.$paidAt,
-
-            str_repeat('-', 32),
         ];
+
+        if (! empty($payload['corrected_at'])) {
+            $lines[] = 'Korrigiert: '.\Carbon\Carbon::parse(
+                $payload['corrected_at']
+            )->format('d.m.Y H:i');
+        }
+
+        $lines[] = str_repeat('-', 32);
 
         $invoiceRecipient = $payload['invoice_recipient'] ?? null;
 
@@ -326,6 +332,27 @@ class PrintOutputRenderer
 
             if (! empty($item['note'])) {
                 $lines[] = '  > '.$item['note'];
+            }
+        }
+
+        /*
+         * Nachträglich stornierte Positionen dieser Zahlung — der
+         * Gesamtbetrag ist bereits um diese Beträge reduziert.
+         */
+        $cancellations = $payload['cancellations'] ?? [];
+
+        if ($cancellations !== []) {
+            $lines[] = str_repeat('-', 32);
+            $lines[] = 'STORNIERT:';
+
+            foreach ($cancellations as $cancellation) {
+                $lines[] = (int) ($cancellation['quantity'] ?? 0).'x '
+                    .($cancellation['name'] ?? 'Unbekanntes Produkt');
+
+                $lines[] = sprintf(
+                    '  -%s EUR',
+                    number_format((float) ($cancellation['total'] ?? 0), 2, ',', '.')
+                );
             }
         }
 
