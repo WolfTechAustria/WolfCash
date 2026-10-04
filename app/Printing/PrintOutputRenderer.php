@@ -335,27 +335,6 @@ class PrintOutputRenderer
             }
         }
 
-        /*
-         * Nachträglich stornierte Positionen dieser Zahlung — der
-         * Gesamtbetrag ist bereits um diese Beträge reduziert.
-         */
-        $cancellations = $payload['cancellations'] ?? [];
-
-        if ($cancellations !== []) {
-            $lines[] = str_repeat('-', 32);
-            $lines[] = 'STORNIERT:';
-
-            foreach ($cancellations as $cancellation) {
-                $lines[] = (int) ($cancellation['quantity'] ?? 0).'x '
-                    .($cancellation['name'] ?? 'Unbekanntes Produkt');
-
-                $lines[] = sprintf(
-                    '  -%s EUR',
-                    number_format((float) ($cancellation['total'] ?? 0), 2, ',', '.')
-                );
-            }
-        }
-
         $lines[] = str_repeat('=', 32);
 
         $lines[] = sprintf(

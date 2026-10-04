@@ -261,7 +261,7 @@ Die Detailseite zeigt:
 
 **Position nachträglich stornieren:** Bei jeder Position mit offener Menge gibt es den Button **Stornieren**. Menge und Grund eingeben und bestätigen – der Bestand wird zurückgebucht und die Bestellsumme neu berechnet. Ein Stornobon für die Küche wird nur gedruckt, wenn das Häkchen gesetzt ist.
 
-Ist die Position bereits bezahlt, wird die Zahlung um den stornierten Betrag reduziert. Ein anschließend gedruckter Beleg zeigt den korrigierten Gesamtbetrag, die stornierten Positionen unter **STORNIERT** und das Korrekturdatum. Den Betrag gibst du dem Gast selbst zurück (bei Kartenzahlung über das Kartenterminal). Wurde die Zahlung an einem bereits abgeschlossenen Tag gemacht, ist kein Storno mehr möglich.
+Ist die Position bereits bezahlt, wird die Zahlung um den stornierten Betrag reduziert. Ein anschließend gedruckter Beleg zeigt nur noch die verbleibenden Positionen, den korrigierten Gesamtbetrag und das Korrekturdatum. Den Betrag gibst du dem Gast selbst zurück (bei Kartenzahlung über das Kartenterminal). Wurde die Zahlung an einem bereits abgeschlossenen Tag gemacht, ist kein Storno mehr möglich.
 
 ### 5.3 Stornos
 

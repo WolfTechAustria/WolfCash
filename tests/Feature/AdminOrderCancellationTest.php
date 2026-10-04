@@ -118,10 +118,10 @@ class AdminOrderCancellationTest extends TestCase
         $output = app(PaymentReceiptService::class)->reprint($payment->fresh());
         $lines = array_map('strval', app(PrintOutputRenderer::class)->render($output)->lines);
 
-        $this->assertContains('STORNIERT:', $lines);
-        $this->assertContains('3x Bier', $lines);
-        $this->assertContains('  -13,50 EUR', $lines);
+        // Stornierte Positionen werden nicht gedruckt, nur der korrigierte Betrag.
+        $this->assertNotContains('3x Bier', $lines);
         $this->assertContains('GESAMT: 0,00 EUR', $lines);
+        $this->assertNotEmpty(preg_grep('/^Korrigiert: /', $lines));
         $this->assertEquals(0, (float) $payment->fresh()->amount);
     }
 
