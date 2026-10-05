@@ -42,12 +42,16 @@
                 </label>
 
                 <select
-                    wire:model.live="group"
+                    wire:model.live="groupId"
                     class="w-full rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-sm focus:border-accent focus:outline-none"
                 >
-                    <option value="all">Alle Gruppen</option>
-                    <option value="Getränke">Getränke</option>
-                    <option value="Speisen">Speisen</option>
+                    <option value="">Alle Gruppen</option>
+
+                    @foreach($groups as $productGroup)
+                        <option value="{{ $productGroup->id }}">
+                            {{ $productGroup->name }}
+                        </option>
+                    @endforeach
                 </select>
             </div>
 
@@ -64,8 +68,10 @@
 
                     @foreach($categories as $category)
                         <option value="{{ $category->id }}">
-                            {{ $category->group }}
-                            ·
+                            @unless($groupId)
+                                {{ $category->group?->name ?? '–' }}
+                                ·
+                            @endunless
                             {{ $category->name }}
                         </option>
                     @endforeach
@@ -127,13 +133,26 @@
                 {{ $selectedTo->format('d.m.Y') }}
             </p>
 
-            <button
-                type="button"
-                wire:click="resetFilters"
-                class="rounded-xl border border-line px-4 py-2.5 text-sm font-medium text-dim transition hover:border-accent hover:text-accent"
-            >
-                Filter zurücksetzen
-            </button>
+            <div class="flex flex-wrap gap-2">
+                <button
+                    type="button"
+                    wire:click="resetFilters"
+                    class="rounded-xl border border-line px-4 py-2.5 text-sm font-medium text-dim transition hover:border-accent hover:text-accent"
+                >
+                    Filter zurücksetzen
+                </button>
+
+                <button
+                    type="button"
+                    wire:click="exportPdf"
+                    wire:loading.attr="disabled"
+                    wire:target="exportPdf"
+                    class="rounded-xl border border-line px-4 py-2.5 text-sm font-medium text-dim transition hover:border-accent hover:text-accent disabled:opacity-50"
+                >
+                    <span wire:loading.remove wire:target="exportPdf">PDF exportieren</span>
+                    <span wire:loading wire:target="exportPdf">Wird erstellt …</span>
+                </button>
+            </div>
 
         </div>
 
