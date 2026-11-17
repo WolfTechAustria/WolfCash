@@ -59,7 +59,7 @@ class PrintOutputRenderer
             ?? $output->orderItem?->note;
 
         $lines = [
-            PrintLine::boldCentered('TISCH '.$tableNumber),
+            PrintLine::table('TISCH '.$tableNumber),
         ];
 
         if ($output->printJob->productionStation) {
@@ -81,7 +81,7 @@ class PrintOutputRenderer
 
         $lines[] = str_repeat('-', 32);
 
-        $lines[] = PrintLine::bold($quantity.'x '.$name);
+        $lines[] = PrintLine::product($quantity.'x '.$name);
 
         if ($note) {
             $lines[] = '  > '.$note;
@@ -132,7 +132,7 @@ class PrintOutputRenderer
         $lines = [
             '*** STORNO ***',
             '',
-            PrintLine::boldCentered('TISCH '.$tableNumber),
+            PrintLine::table('TISCH '.$tableNumber),
         ];
 
         if ($output->printJob->productionStation) {
@@ -146,7 +146,7 @@ class PrintOutputRenderer
 
         $lines[] = str_repeat('=', 32);
 
-        $lines[] = PrintLine::bold($quantity.'x '.$name);
+        $lines[] = PrintLine::product($quantity.'x '.$name);
 
         if ($note) {
             $lines[] = '  > '.$note;
@@ -245,9 +245,15 @@ class PrintOutputRenderer
             'Bestellung: #'.$orderId,
             'Tisch: '.$tableNumber,
             'Datum: '.$paidAt,
-
-            str_repeat('-', 32),
         ];
+
+        if (! empty($payload['corrected_at'])) {
+            $lines[] = 'Korrigiert: '.\Carbon\Carbon::parse(
+                $payload['corrected_at']
+            )->format('d.m.Y H:i');
+        }
+
+        $lines[] = str_repeat('-', 32);
 
         $invoiceRecipient = $payload['invoice_recipient'] ?? null;
 

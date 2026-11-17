@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PrintTextSize;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
@@ -40,6 +41,12 @@ class Setting extends Model
     public const STATIONARY_PRINTER_ID =
         'stationary_printer_id';
 
+    public const PRINT_TABLE_TEXT_SIZE =
+        'print_table_text_size';
+
+    public const PRINT_PRODUCT_TEXT_SIZE =
+        'print_product_text_size';
+
     /**
      * Alle bekannten Schlüssel, z. B. für den System-Reset.
      *
@@ -59,6 +66,8 @@ class Setting extends Model
             static::RECEIPT_INTRO,
             static::RECEIPT_PRINTER_ID,
             static::STATIONARY_PRINTER_ID,
+            static::PRINT_TABLE_TEXT_SIZE,
+            static::PRINT_PRODUCT_TEXT_SIZE,
         ];
     }
 
@@ -170,6 +179,20 @@ class Setting extends Model
             static::valueOf(static::STATIONARY_PRINTER_ID)
             ?: config('printing.stationary_order_printer_id', 0)
         );
+    }
+
+    public static function printTableTextSize(): PrintTextSize
+    {
+        return PrintTextSize::tryFrom(
+            (string) static::valueOf(static::PRINT_TABLE_TEXT_SIZE)
+        ) ?? PrintTextSize::Normal;
+    }
+
+    public static function printProductTextSize(): PrintTextSize
+    {
+        return PrintTextSize::tryFrom(
+            (string) static::valueOf(static::PRINT_PRODUCT_TEXT_SIZE)
+        ) ?? PrintTextSize::Normal;
     }
 
     public static function voucherPaymentEnabled(): bool

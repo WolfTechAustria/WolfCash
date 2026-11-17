@@ -2,6 +2,8 @@
 
 namespace App\Printing;
 
+use App\Enums\PrintTextSize;
+use App\Models\Setting;
 use Stringable;
 
 /**
@@ -15,6 +17,7 @@ final class PrintLine implements Stringable
         public readonly string $text,
         public readonly bool $bold = false,
         public readonly bool $center = false,
+        public readonly PrintTextSize $size = PrintTextSize::Normal,
     ) {
     }
 
@@ -26,6 +29,31 @@ final class PrintLine implements Stringable
     public static function boldCentered(string $text): self
     {
         return new self($text, bold: true, center: true);
+    }
+
+    /**
+     * Tischzeile in der im Admin eingestellten Schriftgröße.
+     */
+    public static function table(string $text): self
+    {
+        return new self(
+            $text,
+            bold: true,
+            center: true,
+            size: Setting::printTableTextSize(),
+        );
+    }
+
+    /**
+     * Produktzeile in der im Admin eingestellten Schriftgröße.
+     */
+    public static function product(string $text, bool $bold = true): self
+    {
+        return new self(
+            $text,
+            bold: $bold,
+            size: Setting::printProductTextSize(),
+        );
     }
 
     public function __toString(): string

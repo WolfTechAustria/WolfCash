@@ -5,11 +5,14 @@ namespace App\Livewire\Admin\ProductReports;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\ProductCategory;
+use App\Models\ProductGroup;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class Index extends Component
 {
@@ -25,8 +28,12 @@ class Index extends Component
     #[Url]
     public ?int $categoryId = null;
 
+    /**
+     * Produktgruppe (product_groups.id). Früher ein fixer Text wie
+     * "Getränke", der auf eine nicht existierende Spalte gefiltert hat.
+     */
     #[Url]
-    public string $group = 'all';
+    public ?int $groupId = null;
 
     #[Url]
     public string $sort = 'revenue';
@@ -53,13 +60,69 @@ class Index extends Component
         $this->applyPeriodDates();
     }
 
+    /**
+     * Eine Kategorie aus einer anderen Gruppe würde sonst zu einer
+     * leeren Liste führen, ohne dass man sieht warum.
+     */
+    public function updatedGroupId(): void
+    {
+        if (
+            $this->groupId
+            && $this->categoryId
+            && ! ProductCategory::query()
+                ->whereKey($this->categoryId)
+                ->where('product_group_id', $this->groupId)
+                ->exists()
+        ) {
+            $this->categoryId = null;
+        }
+    }
+
+    /**
+     * Exportiert die aktuell gefilterte und sortierte Auswertung.
+     */
+    public function exportPdf(): StreamedResponse
+    {
+        $from = $this->startDate();
+        $to = $this->endDate();
+
+        $filters = array_filter([
+            'Produktgruppe' => $this->groupId
+                ? ProductGroup::query()->whereKey($this->groupId)->value('name')
+                : null,
+            'Kategorie' => $this->categoryId
+                ? ProductCategory::query()->whereKey($this->categoryId)->value('name')
+                : null,
+            'Suche' => trim($this->search) !== '' ? trim($this->search) : null,
+        ]);
+
+        $pdf = Pdf::loadView('admin.product-reports.pdf', [
+            'rows' => $this->rows,
+            'summary' => $this->summary,
+            'selectedFrom' => $from,
+            'selectedTo' => $to,
+            'filters' => $filters,
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'portrait');
+
+        $range = $from->isSameDay($to)
+            ? $from->format('Y-m-d')
+            : $from->format('Y-m-d').'_'.$to->format('Y-m-d');
+
+        return response()->streamDownload(
+            fn () => print($pdf->output()),
+            'produktauswertung-'.$range.'.pdf',
+            ['Content-Type' => 'application/pdf']
+        );
+    }
+
     public function resetFilters(): void
     {
         $this->period = 'today';
         $this->dateFrom = today()->format('Y-m-d');
         $this->dateTo = today()->format('Y-m-d');
         $this->categoryId = null;
-        $this->group = 'all';
+        $this->groupId = null;
         $this->sort = 'revenue';
         $this->direction = 'desc';
         $this->search = '';
@@ -166,7 +229,7 @@ class Index extends Component
 
         return OrderItem::query()
             ->with([
-                'product.category',
+                'product.category.group',
                 'order',
             ])
             ->whereHas(
@@ -199,13 +262,13 @@ class Index extends Component
                 )
             )
             ->when(
-                $this->group !== 'all',
+                $this->groupId,
                 fn (Builder $query) => $query->whereHas(
                     'product.category',
                     fn (Builder $categoryQuery) =>
                     $categoryQuery->where(
-                        'group',
-                        $this->group
+                        'product_group_id',
+                        $this->groupId
                     )
                 )
             )
@@ -276,7 +339,7 @@ class Index extends Component
                     'category' => $product?->category?->name
                         ?? 'Ohne Kategorie',
 
-                    'group' => $product?->category?->group
+                    'group' => $product?->category?->group?->name
                         ?? '–',
 
                     'ordered_quantity' => $orderedQuantity,
@@ -359,7 +422,16 @@ class Index extends Component
                 'rows' => $this->rows,
                 'summary' => $this->summary,
 
+                'groups' => ProductGroup::query()
+                    ->orderBy('name')
+                    ->get(),
+
                 'categories' => ProductCategory::query()
+                    ->with('group')
+                    ->when(
+                        $this->groupId,
+                        fn (Builder $query) => $query->where('product_group_id', $this->groupId)
+                    )
                     ->orderBy('sort_order')
                     ->orderBy('name')
                     ->get(),

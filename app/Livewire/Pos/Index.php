@@ -400,7 +400,11 @@ class Index extends Component
             [
                 'tables' => Table::query()
                     ->where('is_stationary', false)
-                    ->with('openOrder')
+                    ->with([
+                        'openOrder' => fn ($query) => $query
+                            ->select('orders.*')
+                            ->withOpenAmount(),
+                    ])
                     ->orderBy('number')
                     ->get(),
 

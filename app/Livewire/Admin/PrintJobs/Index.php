@@ -99,11 +99,47 @@ class Index extends Component
         }
     }
 
+    private function lastActivityAt(PrintJob $job): \Carbon\CarbonInterface
+    {
+        $lastOutput = $job->outputs->max('created_at');
+
+        return $lastOutput && $lastOutput->greaterThan($job->created_at)
+            ? $lastOutput
+            : $job->created_at;
+    }
+
+    /**
+     * Kurzbezeichnung einer einzelnen Druckausgabe für die Übersicht.
+     */
+    public static function outputLabel(PrintOutput $output): string
+    {
+        $payload = $output->payload ?? [];
+
+        return match (true) {
+            $output->type === PrintOutput::TYPE_CANCELLATION => 'Stornobon',
+            $output->type === PrintOutput::TYPE_RECEIPT && ! empty($payload['is_copy']) => 'Belegkopie',
+            $output->type === PrintOutput::TYPE_RECEIPT && ! empty($payload['manual_print']) => 'Manueller Druck',
+            $output->type === PrintOutput::TYPE_RECEIPT => 'Automatischer Druck',
+            default => 'Produktionsbon',
+        };
+    }
+
     public function render(PrintJobPreview $preview)
     {
-        $jobs = PrintJob::with(['printer', 'order.table', 'productionStation'])
-            ->latest()
-            ->get();
+        /*
+         * Nachdrucke und Stornobons hängen als weitere Ausgabe am
+         * ursprünglichen Job. Damit sie nicht unsichtbar weit unten
+         * landen, wird nach der letzten Aktivität sortiert.
+         */
+        $jobs = PrintJob::with([
+            'printer',
+            'order.table',
+            'productionStation',
+            'outputs' => fn ($query) => $query->with('printer')->oldest(),
+        ])
+            ->get()
+            ->sortByDesc(fn (PrintJob $job) => $this->lastActivityAt($job)->getTimestamp() * 1_000_000 + $job->id)
+            ->values();
 
         /*
          * Fehler beim Rendern sollen die Übersicht nicht sprengen –

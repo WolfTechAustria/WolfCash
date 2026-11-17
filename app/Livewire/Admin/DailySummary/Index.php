@@ -2,22 +2,29 @@
 
 namespace App\Livewire\Admin\DailySummary;
 
-use App\Models\Order;
-use App\Models\OrderItemCancellation;
-use App\Models\Payment;
-use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Builder;
-use Livewire\Attributes\Url;
-use Livewire\Component;
 use App\Models\DailyClosing;
 use App\Services\DailyClosingService;
+use App\Services\DailySummaryReport;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Url;
+use Livewire\Component;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 class Index extends Component
 {
     #[Url]
     public string $date = '';
+
+    /**
+     * Gerätefilter: '' = alle, Geräte-ID oder
+     * DailySummaryReport::NO_DEVICE.
+     */
+    #[Url]
+    public string $device = '';
 
     public ?DailyClosing $dailyClosing = null;
 
@@ -77,199 +84,72 @@ class Index extends Component
         )->startOfDay();
     }
 
-    private function ordersQuery(): Builder
+    /**
+     * Pro Request nur einmal berechnen — Seite, Kennzahlen und
+     * Listen greifen auf denselben Stand zu.
+     *
+     * @var array<string, mixed>|null
+     */
+    private ?array $report = null;
+
+    private function report(): array
     {
-        return Order::query()
-            ->whereDate(
-                'created_at',
-                $this->selectedDate()
-            );
+        return $this->report ??= app(DailySummaryReport::class)->build(
+            $this->selectedDate(),
+            $this->device
+        );
     }
 
-    private function paymentsQuery(): Builder
+    public function updatedDevice(): void
     {
-        return Payment::query()
-            ->whereDate(
-                'created_at',
-                $this->selectedDate()
-            );
+        $this->report = null;
     }
 
-    private function cancellationsQuery(): Builder
+    public function filterDevice(string $device): void
     {
-        return OrderItemCancellation::query()
-            ->whereDate(
-                'cancelled_at',
-                $this->selectedDate()
-            );
+        $this->device = $device;
+        $this->report = null;
     }
 
     public function getSummaryProperty(): array
     {
-        /*
-         * Bestellungen inklusive Positionen und Zahlungen laden,
-         * damit alle Kennzahlen aus derselben Datenbasis entstehen.
-         */
-        $orders = $this->ordersQuery()
-            ->with([
-                'items',
-                'payments',
-            ])
-            ->get();
-
-        $payments = $this->paymentsQuery()->get();
-
-        $cancellations = $this->cancellationsQuery()
-            ->with('orderItem')
-            ->get();
-
-        $grossAmount = $orders->sum(
-            fn (Order $order) =>
-            $order->items->sum(
-                fn ($item) =>
-                    (float) $item->price
-                    * (int) $item->quantity
-            )
-        );
-
-        $cancelledAmount = $cancellations->sum(
-            fn (OrderItemCancellation $cancellation) =>
-                (float) (
-                    $cancellation->orderItem?->price
-                    ?? 0
-                )
-                * (int) $cancellation->quantity
-        );
-
-        $payableAmount = $orders->sum(
-            fn (Order $order) =>
-            $order->items->sum(
-                fn ($item) =>
-                    (float) $item->price
-                    * max(
-                        0,
-                        (int) $item->quantity
-                        - (int) $item->cancelled_quantity
-                    )
-            )
-        );
-
-        /*
-         * Eingelöste Bons sind bereits an der stationären Kassa als
-         * Umsatz verbucht und dürfen hier nicht doppelt zählen.
-         */
-        $voucherOrderAmount = (float) $orders->sum(
-            fn (Order $order) => $order->payments
-                ->where('payment_method', Payment::VOUCHER)
-                ->sum('amount')
-        );
-
-        $voucherAmount = (float) $payments
-            ->where('payment_method', Payment::VOUCHER)
-            ->sum('amount');
-
-        $grossAmount -= $voucherOrderAmount;
-        $payableAmount -= $voucherOrderAmount;
-
-        $paidAmount = (float) $payments->sum('amount') - $voucherAmount;
-
-        $cashAmount = (float) $payments
-            ->where('payment_method', 'cash')
-            ->sum('amount');
-
-        $cardAmount = (float) $payments
-            ->where('payment_method', 'card')
-            ->sum('amount');
-
-        return [
-            'orders_total' => $orders->count(),
-
-            'orders_open' => $orders
-                ->where('status', Order::STATUS_OPEN)
-                ->count(),
-
-            'orders_paid' => $orders
-                ->where('status', Order::STATUS_PAID)
-                ->count(),
-
-            'orders_cancelled' => $orders
-                ->where('status', Order::STATUS_CANCELLED)
-                ->count(),
-
-            'gross_amount' => round(
-                $grossAmount,
-                2
-            ),
-
-            'cancelled_amount' => round(
-                $cancelledAmount,
-                2
-            ),
-
-            'payable_amount' => round(
-                $payableAmount,
-                2
-            ),
-
-            'paid_amount' => round(
-                $paidAmount,
-                2
-            ),
-
-            'cash_amount' => round(
-                $cashAmount,
-                2
-            ),
-
-            'card_amount' => round(
-                $cardAmount,
-                2
-            ),
-
-            'voucher_amount' => round(
-                $voucherAmount,
-                2
-            ),
-
-            'open_amount' => max(
-                0,
-                round(
-                    $payableAmount - $paidAmount,
-                    2
-                )
-            ),
-
-            'payments_count' => $payments->count(),
-
-            'cancellations_count' =>
-                $cancellations->count(),
-
-            'cancelled_quantity' =>
-                $cancellations->sum('quantity'),
-        ];
+        return $this->report()['summary'];
     }
 
     public function getOpenOrdersProperty()
     {
-        return $this->ordersQuery()
-            ->with([
-                'table',
-                'items',
-                'payments',
-            ])
-            ->where('status', Order::STATUS_OPEN)
-            ->latest('created_at')
-            ->get();
+        return $this->report()['openOrders'];
     }
 
     public function getPaymentsProperty()
     {
-        return $this->paymentsQuery()
-            ->with([
-                'order.table',
-            ])
-            ->latest('created_at')
-            ->get();
+        return $this->report()['payments'];
+    }
+
+    /**
+     * Exportiert die aktuell angezeigte (ggf. gefilterte) Übersicht.
+     */
+    public function exportPdf(): StreamedResponse
+    {
+        $report = $this->report();
+        $date = $this->selectedDate();
+
+        $pdf = Pdf::loadView('admin.daily-summary.pdf', [
+            ...$report,
+            'selectedDate' => $date,
+            'dailyClosing' => $this->dailyClosing,
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'portrait');
+
+        $suffix = $report['deviceLabel'] !== null
+            ? '-'.Str::slug($report['deviceLabel'])
+            : '';
+
+        return response()->streamDownload(
+            fn () => print($pdf->output()),
+            'tagesuebersicht-'.$date->format('Y-m-d').$suffix.'.pdf',
+            ['Content-Type' => 'application/pdf']
+        );
     }
 
     public function closeDay(
@@ -317,6 +197,8 @@ class Index extends Component
                 'summary' => $this->summary,
                 'openOrders' => $this->openOrders,
                 'payments' => $this->payments,
+                'devices' => $this->report()['devices'],
+                'deviceLabel' => $this->report()['deviceLabel'],
                 'selectedDate' => $this->selectedDate(),
             ]
         )->layout('components.layouts.app');

@@ -102,6 +102,88 @@
             <div class="mb-5">
 
                 <h2 class="font-display text-lg font-semibold">
+                    Schriftgröße am Bon
+                </h2>
+
+                <p class="mt-1 text-sm text-dim">
+                    Größe der Tischnummer und der Produkte auf Produktions-,
+                    Storno- und Selbstbedienungsbons. Zahlungsbelege bleiben
+                    unverändert.
+                </p>
+
+            </div>
+
+            <div class="grid gap-5 md:grid-cols-[1fr_auto]">
+
+                <div class="space-y-4">
+
+                    <div>
+                        <label for="printTableTextSize" class="mb-2 block text-sm font-medium">
+                            Tisch
+                        </label>
+
+                        <select
+                            id="printTableTextSize"
+                            wire:model.live="printTableTextSize"
+                            class="w-full rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-fg outline-none transition focus:border-accent"
+                        >
+                            @foreach($textSizes as $size)
+                                <option value="{{ $size->value }}">
+                                    {{ $size->label() }} ({{ $size->charsPerLine() }} Zeichen/Zeile)
+                                </option>
+                            @endforeach
+                        </select>
+
+                        @error('printTableTextSize')
+                            <p class="mt-1 text-xs text-occupied">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="printProductTextSize" class="mb-2 block text-sm font-medium">
+                            Produkte
+                        </label>
+
+                        <select
+                            id="printProductTextSize"
+                            wire:model.live="printProductTextSize"
+                            class="w-full rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-fg outline-none transition focus:border-accent"
+                        >
+                            @foreach($textSizes as $size)
+                                <option value="{{ $size->value }}">
+                                    {{ $size->label() }} ({{ $size->charsPerLine() }} Zeichen/Zeile)
+                                </option>
+                            @endforeach
+                        </select>
+
+                        @error('printProductTextSize')
+                            <p class="mt-1 text-xs text-occupied">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <p class="text-xs text-dim">
+                        „Doppelt hoch“ ist gut lesbar und lässt lange Produktnamen
+                        trotzdem in einer Zeile. Bei „Doppelt“ und „Dreifach groß“
+                        werden längere Namen umgebrochen.
+                    </p>
+
+                </div>
+
+                <div>
+                    <p class="mb-2 text-sm font-medium">Vorschau</p>
+
+                    <x-print-jobs.paper-slip :document="$productionPreview" />
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="rounded-2xl border border-line bg-surface p-5">
+
+            <div class="mb-5">
+
+                <h2 class="font-display text-lg font-semibold">
                     Zahlungsbelege
                 </h2>
 

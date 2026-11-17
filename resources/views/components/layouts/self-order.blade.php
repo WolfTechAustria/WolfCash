@@ -13,10 +13,7 @@
         content="#17140f"
     >
 
-    <meta
-        http-equiv="Content-Security-Policy"
-        content="upgrade-insecure-requests"
-    >
+    @include('partials.upgrade-insecure-requests')
 
     <title>WolfCash Bestellung</title>
 

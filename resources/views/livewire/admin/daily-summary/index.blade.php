@@ -51,17 +51,71 @@
 
     </div>
 
-    <div class="mb-5 rounded-2xl border border-line bg-surface px-4 py-3">
+    <div class="mb-5 flex flex-col gap-3 rounded-2xl border border-line bg-surface px-4 py-3 md:flex-row md:items-end md:justify-between">
 
-        <p class="text-xs font-semibold uppercase tracking-wide text-dim">
-            Ausgewählter Geschäftstag
-        </p>
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-dim">
+                Ausgewählter Geschäftstag
+            </p>
 
-        <p class="mt-1 font-display text-xl font-semibold">
-            {{ $selectedDate->translatedFormat('l, d. F Y') }}
-        </p>
+            <p class="mt-1 font-display text-xl font-semibold">
+                {{ $selectedDate->locale('de')->translatedFormat('l, d. F Y') }}
+            </p>
+        </div>
+
+        <div class="flex flex-wrap items-end gap-2">
+
+            <div>
+                <label for="deviceFilter" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-dim">
+                    Gerät
+                </label>
+
+                <select
+                    id="deviceFilter"
+                    wire:model.live="device"
+                    class="rounded-xl border border-line bg-surface-2 px-3 py-2 text-sm focus:border-accent focus:outline-none"
+                >
+                    <option value="">Alle Geräte</option>
+                    @foreach($devices as $deviceRow)
+                        <option value="{{ $deviceRow['key'] }}">{{ $deviceRow['name'] }}</option>
+                    @endforeach
+                    @if($device !== '' && ! $devices->contains('key', $device))
+                        <option value="{{ $device }}">{{ $deviceLabel }}</option>
+                    @endif
+                </select>
+            </div>
+
+            <button
+                type="button"
+                wire:click="exportPdf"
+                wire:loading.attr="disabled"
+                wire:target="exportPdf"
+                class="rounded-xl border border-line px-3 py-2 text-sm font-medium text-dim transition hover:border-accent hover:text-accent disabled:opacity-50"
+            >
+                <span wire:loading.remove wire:target="exportPdf">PDF exportieren</span>
+                <span wire:loading wire:target="exportPdf">Wird erstellt …</span>
+            </button>
+
+        </div>
 
     </div>
+
+    @if($deviceLabel !== null)
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-accent/40 bg-accent/10 px-4 py-2.5 text-sm">
+            <span>
+                Gefiltert auf <strong>{{ $deviceLabel }}</strong>:
+                Zahlungen = mit diesem Gerät kassiert, Umsatz und Stornos = mit diesem Gerät boniert.
+            </span>
+
+            <button
+                type="button"
+                wire:click="filterDevice('')"
+                class="text-accent hover:underline"
+            >
+                Filter aufheben
+            </button>
+        </div>
+    @endif
 
     {{-- Tagesabschluss --}}
     <div class="mb-5">
@@ -158,7 +212,8 @@
 
             </div>
 
-        @else
+        {{-- Abschluss betrifft immer den ganzen Tag, nicht ein Gerät --}}
+        @elseif($deviceLabel === null)
 
             <div class="rounded-2xl border border-accent/40 bg-accent/10 p-4">
 
@@ -423,6 +478,62 @@
 
     </div>
 
+    {{-- Umsatz nach Gerät (Kellnerabrechnung) --}}
+    @if($deviceLabel === null && $devices->isNotEmpty())
+        <section class="mb-6">
+
+            <div class="mb-2 flex items-center justify-between">
+                <h2 class="font-display text-lg font-semibold">
+                    Nach Gerät
+                </h2>
+
+                <span class="text-xs text-dim">
+                    Zeile anklicken zum Filtern
+                </span>
+            </div>
+
+            <div class="overflow-x-auto rounded-2xl border border-line bg-surface">
+                <table class="w-full text-sm">
+                    <thead class="bg-surface-2 text-xs uppercase tracking-wide text-dim">
+                    <tr>
+                        <th class="px-4 py-2.5 text-left font-medium">Gerät</th>
+                        <th class="px-4 py-2.5 text-right font-medium">Boniert</th>
+                        <th class="px-4 py-2.5 text-right font-medium">Kassiert</th>
+                        <th class="px-4 py-2.5 text-right font-medium">Bar</th>
+                        <th class="px-4 py-2.5 text-right font-medium">Karte</th>
+                        <th class="px-4 py-2.5 text-right font-medium">Bons</th>
+                        <th class="px-4 py-2.5 text-right font-medium">Zahlungen</th>
+                    </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                    @foreach($devices as $deviceRow)
+                        <tr
+                            wire:key="device-row-{{ $deviceRow['key'] }}"
+                            wire:click="filterDevice('{{ $deviceRow['key'] }}')"
+                            class="cursor-pointer tabular-nums transition hover:bg-surface-2/40"
+                        >
+                            <td class="px-4 py-2.5 font-medium">{{ $deviceRow['name'] }}</td>
+                            <td class="px-4 py-2.5 text-right">{{ number_format($deviceRow['booked_amount'], 2, ',', '.') }} €</td>
+                            <td class="px-4 py-2.5 text-right font-semibold text-free">{{ number_format($deviceRow['paid_amount'], 2, ',', '.') }} €</td>
+                            <td class="px-4 py-2.5 text-right">{{ number_format($deviceRow['cash_amount'], 2, ',', '.') }} €</td>
+                            <td class="px-4 py-2.5 text-right">{{ number_format($deviceRow['card_amount'], 2, ',', '.') }} €</td>
+                            <td class="px-4 py-2.5 text-right text-dim">{{ number_format($deviceRow['voucher_amount'], 2, ',', '.') }} €</td>
+                            <td class="px-4 py-2.5 text-right text-dim">{{ $deviceRow['payments_count'] }}</td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="mt-1.5 text-xs text-dim">
+                Boniert = verrechenbarer Wert der mit dem Gerät bonierten Positionen.
+                Kassiert = mit dem Gerät entgegengenommene Zahlungen (ohne Bons).
+                „Ohne Gerät“ sind z. B. Self-Order-Zahlungen und ältere Positionen ohne Gerätezuordnung.
+            </p>
+
+        </section>
+    @endif
+
     <div class="grid gap-6 xl:grid-cols-2">
 
         {{-- Offene Bestellungen --}}
@@ -445,24 +556,21 @@
                 @forelse($openOrders as $order)
 
                     @php
-                        $payable = $order->items->sum(
-                            fn ($item) =>
-                                (float) $item->price
-                                * max(
-                                    0,
-                                    (int) $item->quantity
-                                    - (int) $item->cancelled_quantity
-                                )
-                        );
-
-                        $paid = (float) $order
-                            ->payments
-                            ->sum('amount');
-
-                        $open = max(
-                            0,
-                            $payable - $paid
-                        );
+                        /*
+                         * Unbezahlte Positionen statt Summe minus Zahlungen —
+                         * beim Gerätefilter sind nur die eigenen Positionen geladen.
+                         */
+                        $open = $order->items
+                            ->whereNull('paid_at')
+                            ->sum(
+                                fn ($item) =>
+                                    (float) $item->price
+                                    * max(
+                                        0,
+                                        (int) $item->quantity
+                                        - (int) $item->cancelled_quantity
+                                    )
+                            );
                     @endphp
 
                     <div
@@ -559,6 +667,10 @@
                                     >
                                         #{{ $payment->order->id }}
                                     </a>
+                                @endif
+
+                                @if($payment->device)
+                                    · {{ $payment->device->name }}
                                 @endif
                             </p>
 

@@ -38,6 +38,12 @@ class ActivityLog extends Model
 
     public const SETTINGS_UPDATED = 'settings.updated';
 
+    public const USER_CREATED = 'user.created';
+
+    public const USER_UPDATED = 'user.updated';
+
+    public const USER_DELETED = 'user.deleted';
+
     public const SYSTEM_RESET = 'system.reset';
 
     public const LOGIN = 'auth.login';
@@ -65,6 +71,9 @@ class ActivityLog extends Model
             self::PRODUCT_UPDATED => 'Produkt geändert',
             self::PRODUCT_DELETED => 'Produkt gelöscht',
             self::SETTINGS_UPDATED => 'Einstellungen',
+            self::USER_CREATED => 'Benutzer angelegt',
+            self::USER_UPDATED => 'Benutzer geändert',
+            self::USER_DELETED => 'Benutzer gelöscht',
             self::SYSTEM_RESET => 'System-Reset',
             self::LOGIN => 'Anmeldung',
             self::LOGIN_FAILED => 'Anmeldung fehlgeschlagen',

@@ -6,8 +6,10 @@ use App\Livewire\Admin\PrintJobs\Index;
 use App\Models\Order;
 use App\Models\PrintJob;
 use App\Models\Printer;
+use App\Models\PrintOutput;
 use App\Models\Table;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -57,5 +59,63 @@ class PrintJobPreviewTest extends TestCase
             ->assertSee('Zahlungsart: Bar')
             ->call('toggle', $production->id)
             ->assertDontSee('Produktionsbon');
+    }
+
+    public function test_reprint_moves_receipt_job_to_top_and_is_listed(): void
+    {
+        Queue::fake();
+
+        $table = Table::create(['number' => '7']);
+        $order = Order::create(['table_id' => $table->id, 'status' => Order::STATUS_PAID]);
+        $printer = Printer::create(['name' => 'Kassa', 'is_active' => true]);
+
+        $this->travelTo(now()->subHour());
+
+        $receipt = PrintJob::create([
+            'order_id' => $order->id,
+            'printer_id' => $printer->id,
+            'type' => PrintJob::TYPE_RECEIPT,
+            'status' => PrintJob::STATUS_PRINTED,
+            'payload' => ['amount' => 12.5, 'payment_method' => 'cash', 'items' => []],
+        ]);
+
+        PrintOutput::create([
+            'print_job_id' => $receipt->id,
+            'printer_id' => $printer->id,
+            'quantity' => 1,
+            'type' => PrintOutput::TYPE_RECEIPT,
+            'status' => PrintOutput::STATUS_PRINTED,
+            'payload' => ['manual_print' => false],
+        ]);
+
+        $this->travelBack();
+
+        // Später angelegter Job, der ohne Nachdruck oben stünde.
+        PrintJob::create([
+            'order_id' => $order->id,
+            'printer_id' => $printer->id,
+            'type' => PrintJob::TYPE_PRODUCTION,
+            'payload' => ['items' => [['name' => 'Schnitzel', 'quantity' => 1]]],
+        ]);
+
+        $this->travel(1)->minutes();
+
+        PrintOutput::create([
+            'print_job_id' => $receipt->id,
+            'printer_id' => $printer->id,
+            'quantity' => 1,
+            'type' => PrintOutput::TYPE_RECEIPT,
+            'status' => PrintOutput::STATUS_PENDING,
+            'payload' => ['manual_print' => true, 'is_copy' => true],
+        ]);
+
+        Livewire::test(Index::class)
+            ->assertSeeInOrder(['12,50 €', 'Schnitzel'])
+            ->assertSee('Belegkopie')
+            ->assertSee('2 Ausdrucke')
+            ->assertSee('ausstehend')
+            ->call('toggle', $receipt->id)
+            ->assertSee('Automatischer Druck')
+            ->assertSee('Ausdrucke');
     }
 }

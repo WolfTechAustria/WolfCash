@@ -259,6 +259,10 @@ Die Detailseite zeigt:
 
 **Beleg nachdrucken:** Klicke bei der Zahlung auf **Beleg drucken** und bestätige die Rückfrage. Nachdrucke werden als **Belegkopie** gekennzeichnet. Der Button ist ausgegraut, wenn der manuelle Belegdruck in den Einstellungen deaktiviert ist oder für ältere Zahlungen kein Beleg gespeichert wurde.
 
+**Position nachträglich stornieren:** Bei jeder Position mit offener Menge gibt es den Button **Stornieren**. Menge und Grund eingeben und bestätigen – der Bestand wird zurückgebucht und die Bestellsumme neu berechnet. Ein Stornobon für die Küche wird nur gedruckt, wenn das Häkchen gesetzt ist.
+
+Ist die Position bereits bezahlt, wird die Zahlung um den stornierten Betrag reduziert. Ein anschließend gedruckter Beleg zeigt nur noch die verbleibenden Positionen, den korrigierten Gesamtbetrag und das Korrekturdatum. Den Betrag gibst du dem Gast selbst zurück (bei Kartenzahlung über das Kartenterminal). Wurde die Zahlung an einem bereits abgeschlossenen Tag gemacht, ist kein Storno mehr möglich.
+
 ### 5.3 Stornos
 
 **Menü:** Bestellungen → Stornos
@@ -426,6 +430,19 @@ Jedes Tablet oder Handy, das die Kasse öffnet, meldet sich hier automatisch an 
 **Menü:** Einstellungen (unten links) → Allgemeine Einstellungen
 
 ![Einstellungen](screenshots/20-einstellungen.png)
+
+### Schriftgröße am Bon
+
+Tischnummer und Produkte auf Produktions-, Storno- und Selbstbedienungsbons lassen sich getrennt vergrößern. Die Vorschau daneben zeigt das Ergebnis schon vor dem Speichern. Zahlungsbelege bleiben unverändert.
+
+| Größe | Zeichen pro Zeile |
+|---|---|
+| **Normal** (Standard) | 32 |
+| **Doppelt hoch** | 32 – gut lesbar, lange Produktnamen bleiben in einer Zeile |
+| **Doppelt groß** | 16 |
+| **Dreifach groß** | 10 |
+
+Längere Texte werden bei „Doppelt“ und „Dreifach groß“ automatisch umgebrochen.
 
 ### Zahlungsbelege
 
