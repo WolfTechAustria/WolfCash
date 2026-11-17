@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin\Dashboard;
 
 use App\Enums\DeviceStatus;
+use App\Models\CardPayment;
 use App\Models\DailyClosing;
 use App\Models\Device;
 use App\Models\Order;
@@ -210,6 +211,15 @@ class Index extends Component
                 ->where('last_seen_at', '>=', now()->subMinutes(self::DEVICE_ONLINE_MINUTES))
                 ->count(),
             'devices_pending' => Device::query()->where('status', DeviceStatus::Pending)->count(),
+
+            /*
+             * Bei Stripe abgebucht, aber nicht verbucht: muss manuell
+             * geklärt werden (verbuchen oder bei Stripe erstatten).
+             */
+            'card_payments_attention' => CardPayment::query()
+                ->where('status', CardPayment::STATUS_REQUIRES_ATTENTION)
+                ->orderBy('created_at')
+                ->get(['id', 'order_id', 'amount', 'stripe_payment_intent_id', 'created_at']),
             'print_jobs_waiting' => PrintJob::query()
                 ->whereIn('status', [PrintJob::STATUS_PENDING, PrintJob::STATUS_PRINTING])
                 ->count(),

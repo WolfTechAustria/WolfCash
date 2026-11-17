@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\Admin\Dashboard\Index as Dashboard;
 use App\Livewire\Pos\Checkout;
 use App\Models\CardPayment;
 use App\Models\Order;
@@ -278,6 +279,32 @@ class CardPaymentFlowTest extends TestCase
             ->assertHasErrors('payment');
 
         $this->assertSame(CardPayment::STATUS_PENDING, $foreign->fresh()->status);
+    }
+
+    public function test_captured_but_unbookable_payment_is_flagged_on_dashboard(): void
+    {
+        $component = $this->checkout()->call('startRemainingCardPayment');
+        $cardPayment = $this->onlyCardPayment();
+
+        // Bei Stripe bereits abgebucht (z. B. früherer Versuch) …
+        $this->stripe->authorize('pi_test_1');
+        $this->stripe->capturePaymentIntent('pi_test_1');
+
+        // … aber das Soda wurde inzwischen bar bezahlt.
+        $this->checkout()
+            ->call('addToPayment', $this->soda->id)
+            ->call('paySelected', 'cash');
+
+        $component
+            ->dispatch('native-card-payment-result', success: true, cardPaymentId: $cardPayment->id)
+            ->assertHasErrors('payment');
+
+        $this->assertSame(CardPayment::STATUS_REQUIRES_ATTENTION, $cardPayment->fresh()->status);
+        $this->assertSame([Payment::CASH], Payment::pluck('payment_method')->all());
+
+        Livewire::test(Dashboard::class)
+            ->assertSee('Kartenzahlung prüfen')
+            ->assertSee('pi_test_1');
     }
 
     public function test_stale_reservations_expire(): void

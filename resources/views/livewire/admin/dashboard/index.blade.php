@@ -271,6 +271,24 @@
                     </a>
                 @endif
 
+                @foreach($operations['card_payments_attention'] as $cardPayment)
+                    <div class="py-2.5">
+                        <div class="flex items-center justify-between">
+                            <dt class="text-occupied">Kartenzahlung prüfen</dt>
+                            <dd class="rounded-full bg-occupied-soft px-2 py-0.5 text-xs font-semibold tabular-nums text-occupied">
+                                ⚠ {{ number_format((float) $cardPayment->amount, 2, ',', '.') }} €
+                            </dd>
+                        </div>
+                        <p class="mt-1 text-xs text-dim">
+                            Bestellung #{{ $cardPayment->order_id }},
+                            {{ $cardPayment->created_at->format('d.m. H:i') }}:
+                            bei Stripe abgebucht, aber nicht verbucht.
+                            Im Stripe-Dashboard prüfen
+                            (<span class="font-mono">{{ $cardPayment->stripe_payment_intent_id }}</span>).
+                        </p>
+                    </div>
+                @endforeach
+
                 <a href="{{ route('admin.print-jobs') }}" class="flex items-center justify-between py-2.5 hover:text-accent">
                     <dt class="text-dim">Druckjobs in Warteschlange</dt>
                     <dd class="tabular-nums font-medium">{{ $operations['print_jobs_waiting'] }}</dd>
