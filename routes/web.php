@@ -23,6 +23,7 @@ use App\Livewire\Admin\DailyClosings\Show as DailyClosingShow;
 use App\Livewire\Admin\ProductReports\Index as ProductReportsIndex;
 use App\Livewire\Admin\Settings\Index as SettingsIndex;
 use App\Livewire\Admin\SystemReset\Index as SystemResetIndex;
+use App\Livewire\Admin\Users\Index as UsersIndex;
 use App\Livewire\Admin\ActivityLog\Index as ActivityLogIndex;
 use App\Http\Controllers\MobileWebSessionController;
 use App\Livewire\SelfOrder\Index as SelfOrderIndex;
@@ -210,6 +211,10 @@ Route::middleware('auth')->group(function () {
             //Einstellungen
             Route::get('/settings',SettingsIndex::class)
                 ->name('admin.settings');
+
+            //Benutzerverwaltung
+            Route::get('/users', UsersIndex::class)
+                ->name('admin.users');
 
             //Protokoll (Audit-Log)
             Route::get('/activity-log', ActivityLogIndex::class)
